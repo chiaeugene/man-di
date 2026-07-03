@@ -1,0 +1,164 @@
+// Mandy — multi-tenant schema. Runs on Postgres (Supabase) in both dev and prod.
+// Enum-like fields stay as plain strings (portable, and Prisma string enums
+// don't require a migration to add a new status) — canonical values live in
+// src/lib/constants.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+
+  profile PhotographerProfile?
+}
+
+// The tenant. All business data hangs off this row.
+model PhotographerProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  photographerName String?
+  studioName       String?
+  city             String?
+  state            String?
+  country          String  @default("Malaysia")
+
+  // ONBOARDING: NOT_STARTED | INTERVIEW | TRAINING | COMPLETED
+  onboardingStatus  String @default("NOT_STARTED")
+  onboardingStep    Int    @default(0)
+  onboardingAnswers String @default("{}") // raw interview answers keyed by step id (JSON)
+
+  // The four brains (JSON, zod-validated in src/lib/ai/schemas.ts).
+  // Package Brain = Package rows + packageRules.
+  brandBrain   String @default("{}")
+  salesBrain   String @default("{}")
+  bookingBrain String @default("{}")
+  packageRules String @default("{}") // travel fee rules, overtime fee rules
+
+  // Phase 2/3 stubs
+  whatsappPhoneId          String?
+  googleCalendarConnected  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  packages         Package[]
+  trainingExamples TrainingExample[]
+  leads            Lead[]
+  conversations    Conversation[]
+}
+
+model Package {
+  id        String @id @default(cuid())
+  profileId String
+  profile   PhotographerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  name          String
+  priceMyr      Int
+  hours         Int?
+  editedPhotos  Int?
+  includesAlbum Boolean @default(false)
+  includesVideo Boolean @default(false)
+  deliverables  String  @default("[]") // string[] (JSON)
+  addOns        String  @default("[]") // {name, priceMyr}[] (JSON)
+  description   String?
+  isActive      Boolean @default(true)
+  sortOrder     Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+}
+
+model TrainingExample {
+  id        String @id @default(cuid())
+  profileId String
+  profile   PhotographerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  scenarioKey       String
+  customerMessage   String
+  photographerReply String
+  createdAt         DateTime @default(now())
+
+  @@index([profileId])
+}
+
+model Lead {
+  id        String @id @default(cuid())
+  profileId String
+  profile   PhotographerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  source       String  @default("PLAYGROUND") // PLAYGROUND | WHATSAPP
+  customerName String?
+  phone        String?
+  eventDate    String? // free text until parsed ("2026-11-14" or "Nov next year")
+  location     String?
+  eventType    String? // actual day / pre-wedding / both / ROM ...
+  budgetRange  String?
+
+  interestedPackageId  String?
+  recommendedPackageId String?
+
+  // src/lib/leads/status.ts: New Lead | Asking Price | Qualifying | Qualified |
+  // Package Recommended | Waiting Decision | Waiting Deposit |
+  // Deposit Paid | Booked | Lost | Human Takeover Needed
+  status         String  @default("New Lead")
+  depositStatus  String  @default("NONE") // NONE | INSTRUCTIONS_SENT | PENDING_CONFIRMATION | CONFIRMED
+  calendarStatus String  @default("NONE") // NONE | CREATED
+
+  summary        String?
+  nextAction     String?
+  needsHuman     Boolean @default(false)
+  takeoverReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversation Conversation?
+
+  @@index([profileId, status])
+}
+
+model Conversation {
+  id        String @id @default(cuid())
+  profileId String
+  profile   PhotographerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  kind   String  @default("PLAYGROUND") // ONBOARDING | TRAINING | PLAYGROUND | WHATSAPP
+  leadId String? @unique
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+
+  @@index([profileId, kind])
+}
+
+model Message {
+  id             String @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role    String // CUSTOMER | MANDY | PHOTOGRAPHER | SYSTEM
+  content String
+  meta    String? // JSON: extracted facts, suggestedStatus, takeover verdict, detectedLanguage
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+}

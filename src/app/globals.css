@@ -1,26 +1,91 @@
 @import "tailwindcss";
 
+/* ————— Mandy design system —————
+   Romantic-editorial: rose + gold + blush + deep wine.
+   Fonts stay Geist (user preference); character comes from
+   color, spacing, soft shadows, and small-caps eyebrow labels. */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fdf2f8;
+  --foreground: #500724;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Brand tokens */
+  --color-rose-brand: #db2777;
+  --color-rose-deep: #9d174d;
+  --color-wine: #500724;
+  --color-wine-soft: #831843;
+  --color-blush: #fdf2f8;
+  --color-blush-deep: #fce7f3;
+  --color-gold: #a16207;
+  --color-gold-soft: #eab308;
+  --color-champagne: #fef9ec;
+
+  --shadow-petal: 0 4px 24px -6px rgb(219 39 119 / 0.14);
+  --shadow-petal-lg: 0 16px 48px -12px rgb(131 24 67 / 0.22);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-up-slow: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-bloom: bloom 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes bloom {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1100px 500px at 85% -10%, rgb(251 207 232 / 0.55), transparent 60%),
+    radial-gradient(900px 420px at -10% 30%, rgb(254 249 236 / 0.9), transparent 55%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Editorial small-caps label ("eyebrow") used above headings */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+/* Subtle dotted texture for chat surfaces */
+.chat-texture {
+  background-image: radial-gradient(rgb(219 39 119 / 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

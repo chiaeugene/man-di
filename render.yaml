@@ -1,0 +1,31 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy: Render dashboard > New > Blueprint > select this repo.
+# After the first deploy, set the `sync: false` env vars in the Render
+# dashboard (Environment tab) — they are secrets and are never stored here.
+
+services:
+  - type: web
+    name: mandy
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npx prisma migrate deploy && npm run start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: AUTH_TRUST_HOST
+        value: "true"
+      - key: LLM_PROVIDER
+        value: anthropic
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: MANDY_LLM_MODEL
+        value: ""
