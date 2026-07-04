@@ -3,25 +3,38 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+// Single-passcode login for the current one-photographer phase (see
+// docs/DEPLOYMENT.md). APP_PASSCODE is a secret env var, not committed.
+// Anyone entering the correct passcode logs into the sole owner account,
+// auto-provisioning it on first successful entry. When this becomes a
+// multi-photographer product, this provider should be replaced with real
+// per-account credentials (email/password or OAuth) again.
+const OWNER_EMAIL = "owner@mandy.local";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        passcode: { label: "Passcode", type: "password" },
       },
       async authorize(credentials) {
-        const email = typeof credentials?.email === "string" ? credentials.email.toLowerCase().trim() : "";
-        const password = typeof credentials?.password === "string" ? credentials.password : "";
-        if (!email || !password) return null;
+        const passcode = typeof credentials?.passcode === "string" ? credentials.passcode.trim() : "";
+        const expected = process.env.APP_PASSCODE;
+        if (!expected || !passcode || passcode !== expected) return null;
 
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return null;
-
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+        let user = await prisma.user.findUnique({ where: { email: OWNER_EMAIL } });
+        if (!user) {
+          user = await prisma.user.create({
+            data: {
+              email: OWNER_EMAIL,
+              name: "Photographer",
+              passwordHash: await bcrypt.hash(passcode, 10),
+              profile: { create: {} },
+            },
+          });
+        }
 
         return { id: user.id, email: user.email, name: user.name };
       },
