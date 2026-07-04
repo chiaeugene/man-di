@@ -122,6 +122,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setData({ ...data, [brainKey]: { ...data[brainKey], [key]: e.target.value } })
                 }
+                placeholder={t(`settings.placeholders.${key}`)}
                 className="w-full rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
               />
             </div>
