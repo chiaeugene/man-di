@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireProfile } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ChannelBadge } from "@/components/ChannelBadge";
+import { LEAD_SOURCES } from "@/lib/constants";
 import { getServerT } from "@/lib/i18n/server";
 import {
   IconAlert,
@@ -24,7 +26,7 @@ export default async function DashboardPage() {
   const [leads, recentConversations] = await Promise.all([
     prisma.lead.findMany({ where: { profileId: profile.id }, orderBy: { updatedAt: "desc" } }),
     prisma.conversation.findMany({
-      where: { profileId: profile.id, kind: { in: ["PLAYGROUND", "WHATSAPP"] } },
+      where: { profileId: profile.id, kind: { in: [...LEAD_SOURCES] } },
       orderBy: { updatedAt: "desc" },
       take: 5,
       include: {
@@ -147,11 +149,9 @@ export default async function DashboardPage() {
                     className="block cursor-pointer rounded-xl px-2 py-3 transition-colors duration-150 hover:bg-rose-50/50"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-wine">
+                      <span className="flex items-center gap-2 text-sm font-semibold text-wine">
                         {c.lead?.customerName || t("dashboard.newInquiry")}
-                        <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-wine-soft/40">
-                          {c.kind === "PLAYGROUND" ? t("dashboard.test") : t("dashboard.whatsapp")}
-                        </span>
+                        <ChannelBadge source={c.kind} />
                       </span>
                       {c.lead && <StatusBadge status={c.lead.status} />}
                     </div>

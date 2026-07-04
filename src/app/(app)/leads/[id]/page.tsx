@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ChannelBadge } from "@/components/ChannelBadge";
 import { LeadActions } from "@/components/LeadActions";
 import { getServerT } from "@/lib/i18n/server";
 import {
@@ -34,7 +35,6 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     [t("leadDetail.location"), lead.location],
     [t("leadDetail.eventType"), lead.eventType],
     [t("leadDetail.budgetRange"), lead.budgetRange],
-    [t("leadDetail.source"), lead.source === "PLAYGROUND" ? t("leadDetail.testSource") : t("leadDetail.whatsappSource")],
     [t("leadDetail.deposit"), lead.depositStatus.replaceAll("_", " ").toLowerCase()],
     [t("leadDetail.calendar"), lead.calendarStatus === "CREATED" ? t("leadDetail.eventCreated") : "—"],
   ];
@@ -63,9 +63,12 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <section className="min-w-0 overflow-hidden rounded-3xl border border-rose-100 bg-white shadow-petal">
-          <h2 className="border-b border-rose-100 bg-rose-50/50 px-6 py-4 text-sm font-bold uppercase tracking-[0.14em] text-wine-soft">
-            {t("leadDetail.conversation")}
-          </h2>
+          <div className="flex items-center justify-between border-b border-rose-100 bg-rose-50/50 px-6 py-4">
+            <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-wine-soft">
+              {t("leadDetail.conversation")}
+            </h2>
+            <ChannelBadge source={lead.source} />
+          </div>
           <div className="chat-texture max-h-[32rem] space-y-4 overflow-y-auto p-6">
             {messages.length === 0 ? (
               <p className="text-sm text-wine-soft/50">{t("leadDetail.noMessages")}</p>
@@ -102,9 +105,12 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
         <div className="space-y-6">
           <section className="rounded-3xl border border-rose-100 bg-white p-6 shadow-petal">
-            <div className="mb-4 flex items-center gap-2">
-              <span className="text-gold"><IconCalendar size={15} /></span>
-              <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-wine-soft">{t("leadDetail.leadProfile")}</h2>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-gold"><IconCalendar size={15} /></span>
+                <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-wine-soft">{t("leadDetail.leadProfile")}</h2>
+              </div>
+              <ChannelBadge source={lead.source} />
             </div>
             <dl className="space-y-2.5 text-sm">
               {facts.map(([k, v]) => (

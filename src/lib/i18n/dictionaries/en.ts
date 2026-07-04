@@ -18,6 +18,12 @@ const en = {
     yes: "Yes",
     no: "No",
   },
+  channels: {
+    playground: "Website (Test)",
+    whatsapp: "WhatsApp",
+    instagram: "Instagram",
+    messenger: "Messenger",
+  },
   nav: {
     brandName: "Mandy",
     tagline: "Sales Coordinator",
@@ -86,6 +92,7 @@ const en = {
     noLeadsSuffix2: "to create sandbox leads.",
     playground: "playground",
     tableCouple: "Couple",
+    tableChannel: "Channel",
     tableDate: "Wedding date",
     tableLocation: "Location",
     tableStatus: "Status",
@@ -247,6 +254,7 @@ const en = {
     doneMessage: "Training complete! I've learned your selling style. Go test me in the playground. 🧪",
     doneMessageWithStyle: "That's all 12 scenarios — thank you! 🎉 Here's what I learned about your selling style:",
     doneMessagePlain: "That's all 12 scenarios — thank you! 🎉 I've saved all your replies and will sell the way you do.",
+    redoHint: "click any scenario on the right to redo it anytime.",
   },
   playground: {
     eyebrow: "Playground",

@@ -17,6 +17,12 @@ const ms: typeof en = {
     yes: "Ya",
     no: "Tidak",
   },
+  channels: {
+    playground: "Laman Web (Ujian)",
+    whatsapp: "WhatsApp",
+    instagram: "Instagram",
+    messenger: "Messenger",
+  },
   nav: {
     brandName: "Mandy",
     tagline: "Penyelaras Jualan",
@@ -85,6 +91,7 @@ const ms: typeof en = {
     noLeadsSuffix2: "untuk mencipta lead ujian.",
     playground: "playground",
     tableCouple: "Pasangan",
+    tableChannel: "Saluran",
     tableDate: "Tarikh perkahwinan",
     tableLocation: "Lokasi",
     tableStatus: "Status",
@@ -246,6 +253,7 @@ const ms: typeof en = {
     doneMessage: "Latihan selesai! Saya sudah mempelajari gaya jualan anda. Pergi uji saya di playground. 🧪",
     doneMessageWithStyle: "Semua 12 senario selesai — terima kasih! 🎉 Ini yang saya pelajari tentang gaya jualan anda:",
     doneMessagePlain: "Semua 12 senario selesai — terima kasih! 🎉 Saya telah simpan semua jawapan anda dan akan menjual mengikut cara anda.",
+    redoHint: "klik mana-mana senario di sebelah kanan untuk buat semula bila-bila masa.",
   },
   playground: {
     eyebrow: "Playground",

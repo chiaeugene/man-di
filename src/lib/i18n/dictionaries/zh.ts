@@ -17,6 +17,12 @@ const zh: typeof en = {
     yes: "是",
     no: "否",
   },
+  channels: {
+    playground: "网站（测试）",
+    whatsapp: "WhatsApp",
+    instagram: "Instagram",
+    messenger: "Messenger",
+  },
   nav: {
     brandName: "Mandy",
     tagline: "销售协调员",
@@ -85,6 +91,7 @@ const zh: typeof en = {
     noLeadsSuffix2: "试试创建测试客户。",
     playground: "测试区",
     tableCouple: "新人",
+    tableChannel: "渠道",
     tableDate: "婚礼日期",
     tableLocation: "地点",
     tableStatus: "状态",
@@ -246,6 +253,7 @@ const zh: typeof en = {
     doneMessage: "训练完成！我已经学会了您的销售风格。到测试区来试试我吧。🧪",
     doneMessageWithStyle: "12 个情境都完成了 — 谢谢您！🎉 以下是我学到的销售风格总结：",
     doneMessagePlain: "12 个情境都完成了 — 谢谢您！🎉 我已保存您所有的回复，并会以您的方式来销售。",
+    redoHint: "随时点击右侧任一情境即可重新训练。",
   },
   playground: {
     eyebrow: "测试区",

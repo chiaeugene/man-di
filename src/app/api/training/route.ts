@@ -19,9 +19,14 @@ export async function GET() {
     const next = scenarios.find((s) => !answeredKeys.has(s.key)) ?? null;
 
     return {
+      // intro/customerMessage included for every scenario (not just the next
+      // unanswered one) so a photographer can click any scenario, done or
+      // not, and redo it — training never "locks" once complete.
       scenarios: scenarios.map((s) => ({
         key: s.key,
         label: s.label,
+        intro: s.intro,
+        customerMessage: s.customerMessage,
         learns: s.learns,
         answered: answeredKeys.has(s.key),
         reply: examples.find((e) => e.scenarioKey === s.key)?.photographerReply ?? null,

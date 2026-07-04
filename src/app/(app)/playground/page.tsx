@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChatWindow, type ChatMsg } from "@/components/Chat";
+import { ChannelBadge } from "@/components/ChannelBadge";
 import { IconAlert, IconArrowRight, IconFlask, IconSparkles } from "@/components/Icons";
 import { useI18n } from "@/lib/i18n/LocaleProvider";
 
@@ -86,6 +87,7 @@ export default function PlaygroundPage() {
 
       {status && (
         <div className="mb-5 flex items-center gap-3 rounded-2xl border border-rose-100 bg-white px-5 py-3 text-sm shadow-petal">
+          <ChannelBadge source="PLAYGROUND" />
           <span className="text-wine-soft/60">{t("playground.leadStatus")}</span>
           <span className="font-bold text-wine">{t(`leadStatus.${status}`)}</span>
           {takeover && (

@@ -37,8 +37,23 @@ export const DEPOSIT_STATUSES = [
 ] as const;
 export type DepositStatus = (typeof DEPOSIT_STATUSES)[number];
 
-export const CONVERSATION_KINDS = ["ONBOARDING", "TRAINING", "PLAYGROUND", "WHATSAPP"] as const;
+// PLAYGROUND is live today; WHATSAPP/INSTAGRAM/MESSENGER are reserved for
+// Phase 2 channel integrations (see docs/ROADMAP.md) — declared now so the
+// UI's channel labeling (src/lib/channels.ts) is ready before they're wired up.
+export const CONVERSATION_KINDS = [
+  "ONBOARDING",
+  "TRAINING",
+  "PLAYGROUND",
+  "WHATSAPP",
+  "INSTAGRAM",
+  "MESSENGER",
+] as const;
 export type ConversationKind = (typeof CONVERSATION_KINDS)[number];
+
+// Same set as CONVERSATION_KINDS, minus the internal-only kinds — this is
+// what a Lead.source can be.
+export const LEAD_SOURCES = ["PLAYGROUND", "WHATSAPP", "INSTAGRAM", "MESSENGER"] as const;
+export type LeadSource = (typeof LEAD_SOURCES)[number];
 
 export const MESSAGE_ROLES = ["CUSTOMER", "MANDY", "PHOTOGRAPHER", "SYSTEM"] as const;
 export type MessageRole = (typeof MESSAGE_ROLES)[number];

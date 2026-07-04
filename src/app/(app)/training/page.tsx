@@ -13,9 +13,7 @@ interface Scenario {
   customerMessage: string;
 }
 
-interface ScenarioSummary {
-  key: string;
-  label: string;
+interface ScenarioSummary extends Scenario {
   learns: string;
   answered: boolean;
 }
@@ -51,6 +49,16 @@ export default function TrainingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale]);
 
+  // Training never "locks" — clicking any scenario (answered or not) loads
+  // its role-play prompt again so the photographer can redo it any time.
+  function selectScenario(s: ScenarioSummary) {
+    setCurrent({ key: s.key, label: s.label, intro: s.intro, customerMessage: s.customerMessage });
+    setMessages([
+      { role: "mandy", content: s.intro },
+      { role: "mandy", content: s.customerMessage, badge: `${t("training.mockCustomer")} — ${s.label}` },
+    ]);
+  }
+
   async function send(text: string) {
     if (!current) return;
     setMessages((m) => [...m, { role: "me", content: text }]);
@@ -67,7 +75,7 @@ export default function TrainingPage() {
         return;
       }
       setProgress({ answered: data.answeredCount, total: data.total });
-      setScenarios((s) => s.map((x) => (x.key === current.key ? { ...x, answered: true } : x)));
+      setScenarios((s) => s.map((x) => (x.key === current.key ? { ...x, answered: true, reply: text } : x)));
       setDone(data.done);
       if (data.next) {
         setCurrent(data.next);
@@ -78,14 +86,13 @@ export default function TrainingPage() {
           { role: "mandy", content: data.next.customerMessage, badge: `${t("training.mockCustomer")} — ${data.next.label}` },
         ]);
       } else {
-        setCurrent(null);
         setMessages((m) => [
           ...m,
           {
             role: "mandy",
             content: data.styleProfile
               ? `${t("training.doneMessageWithStyle")}\n\n${data.styleProfile}`
-              : t("training.doneMessagePlain"),
+              : t("training.learnedThat"),
           },
         ]);
       }
@@ -116,6 +123,8 @@ export default function TrainingPage() {
               <Link href="/playground" className="inline-flex items-center gap-1 font-semibold underline underline-offset-2">
                 {t("training.testInPlayground")} <IconArrowRight size={13} />
               </Link>
+              {" — "}
+              {t("training.redoHint")}
             </p>
           </div>
         )}
@@ -135,27 +144,30 @@ export default function TrainingPage() {
         <h2 className="eyebrow mb-3">{t("training.scenariosHeading")}</h2>
         <ul className="space-y-1.5">
           {scenarios.map((s) => (
-            <li
-              key={s.key}
-              className={`flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium transition-colors duration-150 ${
-                s.answered
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : s.key === current?.key
-                    ? "border-rose-300 bg-rose-50 text-rose-800 shadow-petal"
-                    : "border-rose-100 bg-white text-wine-soft/70"
-              }`}
-              title={s.learns}
-            >
-              {s.answered ? (
-                <IconCheck size={12} className="shrink-0 text-emerald-600" />
-              ) : (
-                <span
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                    s.key === current?.key ? "animate-pulse bg-rose-500" : "bg-rose-200"
-                  }`}
-                />
-              )}
-              {s.label}
+            <li key={s.key}>
+              <button
+                type="button"
+                onClick={() => selectScenario(s)}
+                title={s.learns}
+                className={`flex w-full cursor-pointer items-center gap-2 rounded-xl border px-3.5 py-2.5 text-left text-xs font-medium transition-colors duration-150 ${
+                  s.answered
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                    : s.key === current?.key
+                      ? "border-rose-300 bg-rose-50 text-rose-800 shadow-petal"
+                      : "border-rose-100 bg-white text-wine-soft/70 hover:bg-rose-50"
+                }`}
+              >
+                {s.answered ? (
+                  <IconCheck size={12} className="shrink-0 text-emerald-600" />
+                ) : (
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                      s.key === current?.key ? "animate-pulse bg-rose-500" : "bg-rose-200"
+                    }`}
+                  />
+                )}
+                {s.label}
+              </button>
             </li>
           ))}
         </ul>

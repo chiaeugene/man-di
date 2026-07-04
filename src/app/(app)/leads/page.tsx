@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireProfile } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ChannelBadge } from "@/components/ChannelBadge";
 import { LEAD_STATUSES } from "@/lib/constants";
 import { IconAlert, IconUsers } from "@/components/Icons";
 import { getServerT } from "@/lib/i18n/server";
@@ -75,6 +76,7 @@ export default async function LeadsPage({
             <thead>
               <tr className="border-b border-rose-100 bg-rose-50/60 text-left text-[11px] uppercase tracking-[0.12em] text-wine-soft/60">
                 <th className="px-5 py-3 font-semibold">{t("leads.tableCouple")}</th>
+                <th className="px-5 py-3 font-semibold">{t("leads.tableChannel")}</th>
                 <th className="px-5 py-3 font-semibold">{t("leads.tableDate")}</th>
                 <th className="px-5 py-3 font-semibold">{t("leads.tableLocation")}</th>
                 <th className="px-5 py-3 font-semibold">{t("leads.tableStatus")}</th>
@@ -96,10 +98,9 @@ export default async function LeadsPage({
                         )}
                       </span>
                     </Link>
-                    <p className="text-xs text-wine-soft/50">
-                      {l.source === "PLAYGROUND" ? t("leads.testLead") : l.phone || t("dashboard.whatsapp")}
-                    </p>
+                    {l.phone && <p className="text-xs text-wine-soft/50">{l.phone}</p>}
                   </td>
+                  <td className="px-5 py-3.5"><ChannelBadge source={l.source} /></td>
                   <td className="px-5 py-3.5 tabular-nums text-wine-soft">{l.eventDate || "—"}</td>
                   <td className="px-5 py-3.5 text-wine-soft">{l.location || "—"}</td>
                   <td className="px-5 py-3.5"><StatusBadge status={l.status} /></td>
