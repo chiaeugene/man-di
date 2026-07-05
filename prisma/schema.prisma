@@ -80,6 +80,30 @@ model Package {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  attachments PackageAttachment[]
+
+  @@index([profileId])
+}
+
+// Photo/PDF files attached to a package that Mandy can choose to send during
+// a conversation (e.g. a price sheet PDF or sample gallery photo).
+model PackageAttachment {
+  id        String  @id @default(cuid())
+  profileId String
+  packageId String
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  fileName  String
+  label     String? // short description shown to Mandy so she knows when to send it
+  fileType  String // PHOTO | PDF
+  mimeType  String
+  data      Bytes
+  sizeBytes Int
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([packageId])
   @@index([profileId])
 }
 
@@ -157,6 +181,7 @@ model Message {
   role    String // CUSTOMER | MANDY | PHOTOGRAPHER | SYSTEM
   content String
   meta    String? // JSON: extracted facts, suggestedStatus, takeover verdict, detectedLanguage
+  attachmentIds String? // JSON string[] of PackageAttachment ids sent with this message
 
   createdAt DateTime @default(now())
 

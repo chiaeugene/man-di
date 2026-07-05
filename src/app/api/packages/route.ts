@@ -10,6 +10,7 @@ export async function GET() {
     const packages = await prisma.package.findMany({
       where: { profileId: profile.id },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      include: { attachments: { orderBy: { sortOrder: "asc" } } },
     });
     return { packages: packages.map(serializePackage) };
   });

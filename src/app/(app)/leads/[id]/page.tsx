@@ -6,10 +6,13 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { LeadActions } from "@/components/LeadActions";
 import { getServerT } from "@/lib/i18n/server";
+import { parseJson } from "@/lib/json";
+import { serializeAttachment } from "@/lib/attachments";
 import {
   IconAlert,
   IconArrowLeft,
   IconCalendar,
+  IconFileText,
   IconHeartFilled,
   IconSparkles,
 } from "@/components/Icons";
@@ -28,6 +31,17 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   if (!lead) notFound();
 
   const messages = lead.conversation?.messages ?? [];
+
+  const allAttachmentIds = messages.flatMap((m) => parseJson<string[]>(m.attachmentIds, []));
+  const attachmentsById = allAttachmentIds.length
+    ? Object.fromEntries(
+        (
+          await prisma.packageAttachment.findMany({
+            where: { id: { in: allAttachmentIds }, profileId: profile.id },
+          })
+        ).map((a) => [a.id, serializeAttachment(a)])
+      )
+    : {};
 
   const facts: [string, string | null][] = [
     [t("leadDetail.phone"), lead.phone],
@@ -73,32 +87,56 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             {messages.length === 0 ? (
               <p className="text-sm text-wine-soft/50">{t("leadDetail.noMessages")}</p>
             ) : (
-              messages.map((m) => (
-                <div key={m.id} className={`flex items-start gap-2.5 ${m.role === "CUSTOMER" ? "justify-start" : "justify-end"}`}>
-                  <div
-                    className={`max-w-[75%] whitespace-pre-wrap rounded-3xl px-4.5 py-3 text-sm leading-relaxed ${
-                      m.role === "CUSTOMER"
-                        ? "rounded-tl-lg border border-rose-100/80 bg-white text-wine shadow-petal"
-                        : m.role === "MANDY"
-                          ? "rounded-br-lg bg-gradient-to-br from-rose-500 to-pink-600 text-white shadow-petal"
-                          : "rounded-br-lg bg-wine text-white shadow-petal"
-                    }`}
-                  >
+              messages.map((m) => {
+                const attachments = parseJson<string[]>(m.attachmentIds, [])
+                  .map((id) => attachmentsById[id])
+                  .filter(Boolean);
+                return (
+                  <div key={m.id} className={`flex items-start gap-2.5 ${m.role === "CUSTOMER" ? "justify-start" : "justify-end"}`}>
                     <div
-                      className={`mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                        m.role === "CUSTOMER" ? "text-gold" : "text-white/70"
+                      className={`max-w-[75%] whitespace-pre-wrap rounded-3xl px-4.5 py-3 text-sm leading-relaxed ${
+                        m.role === "CUSTOMER"
+                          ? "rounded-tl-lg border border-rose-100/80 bg-white text-wine shadow-petal"
+                          : m.role === "MANDY"
+                            ? "rounded-br-lg bg-gradient-to-br from-rose-500 to-pink-600 text-white shadow-petal"
+                            : "rounded-br-lg bg-wine text-white shadow-petal"
                       }`}
                     >
-                      {m.role === "MANDY" && <IconHeartFilled size={9} />}
-                      {m.role === "CUSTOMER" ? t("leadDetail.customer") : m.role === "MANDY" ? t("leadDetail.mandy") : t("leadDetail.you")}
-                      <span className="font-normal normal-case tracking-normal opacity-70">
-                        {new Date(m.createdAt).toLocaleString()}
-                      </span>
+                      <div
+                        className={`mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                          m.role === "CUSTOMER" ? "text-gold" : "text-white/70"
+                        }`}
+                      >
+                        {m.role === "MANDY" && <IconHeartFilled size={9} />}
+                        {m.role === "CUSTOMER" ? t("leadDetail.customer") : m.role === "MANDY" ? t("leadDetail.mandy") : t("leadDetail.you")}
+                        <span className="font-normal normal-case tracking-normal opacity-70">
+                          {new Date(m.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      {m.content}
+                      {attachments.map((a) =>
+                        a.fileType === "PHOTO" ? (
+                          <a key={a.id} href={a.url} target="_blank" rel="noreferrer" className="mt-2 block max-w-[200px] overflow-hidden rounded-2xl border border-white/30">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={a.url} alt={a.fileName} className="block w-full" />
+                          </a>
+                        ) : (
+                          <a
+                            key={a.id}
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 flex max-w-[200px] items-center gap-2 rounded-2xl border border-white/30 bg-black/10 px-3 py-2 text-xs font-medium"
+                          >
+                            <IconFileText size={14} className="shrink-0" />
+                            <span className="truncate">{a.fileName}</span>
+                          </a>
+                        )
+                      )}
                     </div>
-                    {m.content}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>

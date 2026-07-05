@@ -50,7 +50,15 @@ export default function PlaygroundPage() {
         setMessages((m) => [...m, { role: "system", content: data.error ?? "Something went wrong." }]);
         return;
       }
-      setMessages((m) => [...m, { role: "mandy", content: data.reply, badge: `${t("leadDetail.mandy")} · ${data.detectedLanguage}` }]);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "mandy",
+          content: data.reply,
+          badge: `${t("leadDetail.mandy")} · ${data.detectedLanguage}`,
+          attachments: data.attachments,
+        },
+      ]);
       setStatus(data.status);
       if (data.takeover?.needed) {
         const reason = data.takeover.reason ?? t("playground.takeoverGeneric");

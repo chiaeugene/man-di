@@ -166,6 +166,13 @@ const zh: typeof en = {
     overtimeFeeRulesPlaceholder: "每多一小时 RM300，以 30 分钟为单位计算。",
     saveFeeRules: "保存收费规则",
     deleteConfirm: "删除此套餐？Mandy 将不再提供此套餐。",
+    attachments: "附件",
+    attachmentsHint: "Mandy 认为有帮助时可在聊天中发送的照片或 PDF（例如价目表或样片相册）。",
+    addAttachment: "添加照片/PDF",
+    attachmentLabelPlaceholder: "这是什么？例如「价目表 PDF」",
+    attachmentTooLarge: "文件太大（最多 8MB）。",
+    attachmentBadType: "只允许 JPEG、PNG、WEBP 图片或 PDF 文件。",
+    deleteAttachmentConfirm: "移除此附件？",
   },
   settings: {
     eyebrow: "Mandy 所了解的一切",

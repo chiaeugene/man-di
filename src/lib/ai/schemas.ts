@@ -82,5 +82,8 @@ export const EngineOutputSchema = z.object({
     })
     .catch({ needed: false, reason: null }),
   confidence: z.number().min(0).max(1).catch(0.8),
+  // Attachment ids (from the package catalog) Mandy wants to send with this
+  // reply. Validated server-side against real, tenant-owned attachments.
+  sendAttachmentIds: z.array(z.string()).catch([]).default([]),
 });
 export type EngineOutput = z.infer<typeof EngineOutputSchema>;

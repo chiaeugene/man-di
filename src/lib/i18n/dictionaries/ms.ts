@@ -166,6 +166,13 @@ const ms: typeof en = {
     overtimeFeeRulesPlaceholder: "RM300 setiap jam tambahan, dikira dalam blok 30 minit.",
     saveFeeRules: "Simpan peraturan yuran",
     deleteConfirm: "Padam pakej ini? Mandy tidak akan menawarkannya lagi.",
+    attachments: "Lampiran",
+    attachmentsHint: "Foto atau PDF yang Mandy boleh hantar semasa berbual bila difikirkan berguna (cth. senarai harga atau contoh galeri).",
+    addAttachment: "Tambah foto/PDF",
+    attachmentLabelPlaceholder: "Apa ini? cth. \"PDF senarai harga\"",
+    attachmentTooLarge: "Fail terlalu besar (maksimum 8MB).",
+    attachmentBadType: "Hanya imej JPEG, PNG, WEBP atau fail PDF dibenarkan.",
+    deleteAttachmentConfirm: "Buang lampiran ini?",
   },
   settings: {
     eyebrow: "Semua yang Mandy tahu",

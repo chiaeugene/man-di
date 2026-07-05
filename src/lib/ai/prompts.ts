@@ -1,4 +1,4 @@
-import type { Package, PhotographerProfile, TrainingExample, Lead } from "@prisma/client";
+import type { Package, PackageAttachment, PhotographerProfile, TrainingExample, Lead } from "@prisma/client";
 import { parseJson } from "@/lib/json";
 import {
   BrandBrainSchema,
@@ -16,7 +16,7 @@ function line(label: string, value: string | null | undefined): string {
   return value && value.trim() ? `- ${label}: ${value.trim()}\n` : "";
 }
 
-function renderPackage(p: Package): string {
+function renderPackage(p: Package & { attachments?: PackageAttachment[] }): string {
   const deliverables = parseJson<string[]>(p.deliverables, []);
   const addOns = parseJson<{ name: string; priceMyr: number }[]>(p.addOns, []);
   let out = `### ${p.name} — RM${p.priceMyr.toLocaleString()}\n`;
@@ -28,13 +28,17 @@ function renderPackage(p: Package): string {
   if (addOns.length)
     out += `- Add-ons: ${addOns.map((a) => `${a.name} (RM${a.priceMyr})`).join("; ")}\n`;
   if (p.description) out += `- Notes: ${p.description}\n`;
+  if (p.attachments?.length)
+    out += `- Attachments you can send (use the exact id in "sendAttachmentIds"): ${p.attachments
+      .map((a) => `[${a.id}] ${a.label || a.fileName} (${a.fileType})`)
+      .join("; ")}\n`;
   return out;
 }
 
 // Compiles the full customer-facing system prompt for one tenant.
 export function buildMandySystemPrompt(opts: {
   profile: PhotographerProfile;
-  packages: Package[];
+  packages: (Package & { attachments?: PackageAttachment[] })[];
   trainingExamples: TrainingExample[];
   lead?: Lead | null;
 }): string {
@@ -162,10 +166,12 @@ Hand over to a human (set takeover.needed=true, keep reply graceful, e.g. "Let m
   "extracted": { "customerName": string|null, "eventDate": string|null, "location": string|null, "eventType": string|null, "budgetRange": string|null, "interestedPackage": string|null },
   "suggestedStatus": one of ${JSON.stringify(LEAD_STATUSES)} or null,
   "takeover": { "needed": boolean, "reason": string|null },
-  "confidence": number between 0 and 1
+  "confidence": number between 0 and 1,
+  "sendAttachmentIds": string[]
 }
 "extracted" holds only NEW facts learned from the customer's latest message (null otherwise).
 "suggestedStatus": your judgement of the lead's stage. Note the system will only auto-apply ${JSON.stringify(AI_ALLOWED_STATUSES)} — "Deposit Paid" and "Booked" are set by the photographer only.
+"sendAttachmentIds": exact attachment ids (from the package catalog above) to send with this reply, or an empty array. Only include one when it clearly helps right now — e.g. the customer asked for the price list/brochure, or you just recommended a package and a sample photo or PDF for it exists. Never invent an id that wasn't listed. Don't attach something with every message.
 Keep "reply" concise like a real WhatsApp chat: usually 2-6 short sentences, friendly emoji use where it fits the brand.`
   );
 

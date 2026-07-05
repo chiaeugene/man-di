@@ -23,7 +23,7 @@ export async function generateMandyReply(opts: {
   lead: Lead;
   conversationId: string;
   customerMessage: string;
-}): Promise<{ reply: string; output: EngineOutput; lead: Lead }> {
+}): Promise<{ reply: string; output: EngineOutput; lead: Lead; attachmentIds: string[] }> {
   const { profile, lead, conversationId, customerMessage } = opts;
 
   if (!llmConfigured()) throw new LlmNotConfiguredError();
@@ -37,6 +37,7 @@ export async function generateMandyReply(opts: {
     prisma.package.findMany({
       where: { profileId: profile.id, isActive: true },
       orderBy: { sortOrder: "asc" },
+      include: { attachments: { orderBy: { sortOrder: "asc" } } },
     }),
     prisma.trainingExample.findMany({
       where: { profileId: profile.id },
@@ -72,10 +73,17 @@ export async function generateMandyReply(opts: {
         suggestedStatus: null,
         takeover: { needed: false, reason: null },
         confidence: 0.3,
+        sendAttachmentIds: [],
       };
 
+  // Guardrail: only allow attachment ids that actually belong to this
+  // tenant's active packages — the model can never reference another
+  // tenant's files or an id it invented.
+  const validAttachmentIds = new Set(packages.flatMap((p) => p.attachments.map((a) => a.id)));
+  const attachmentIds = output.sendAttachmentIds.filter((id) => validAttachmentIds.has(id));
+
   const updatedLead = await applyEngineEffects(lead, output);
-  return { reply: output.reply, output, lead: updatedLead };
+  return { reply: output.reply, output, lead: updatedLead, attachmentIds };
 }
 
 // Server-side guardrail layer: the model only *suggests*; we decide what applies.
@@ -120,6 +128,7 @@ export async function recordExchange(opts: {
   conversationId: string;
   customerMessage: string;
   output: EngineOutput;
+  attachmentIds?: string[];
 }) {
   await prisma.$transaction([
     prisma.message.create({
@@ -141,6 +150,8 @@ export async function recordExchange(opts: {
           takeover: opts.output.takeover,
           confidence: opts.output.confidence,
         }),
+        attachmentIds:
+          opts.attachmentIds && opts.attachmentIds.length ? toJson(opts.attachmentIds) : null,
       },
     }),
     prisma.conversation.update({

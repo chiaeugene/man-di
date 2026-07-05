@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireProfile } from "@/lib/tenant";
 import { handle, ApiError } from "@/lib/api";
 import { generateMandyReply, recordExchange, refreshLeadSummary } from "@/lib/ai/engine";
+import { serializeAttachment } from "@/lib/attachments";
 
 const BodySchema = z.object({
   conversationId: z.string(),
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { output, lead } = await generateMandyReply({
+    const { output, lead, attachmentIds } = await generateMandyReply({
       profile,
       lead: conversation.lead,
       conversationId: conversation.id,
@@ -40,10 +41,17 @@ export async function POST(req: Request) {
       conversationId: conversation.id,
       customerMessage: body.data.message,
       output,
+      attachmentIds,
     });
 
     // Fire-and-forget summary refresh (best-effort).
     refreshLeadSummary(profile, lead, conversation.id).catch(() => {});
+
+    const attachments = attachmentIds.length
+      ? (await prisma.packageAttachment.findMany({ where: { id: { in: attachmentIds } } })).map(
+          serializeAttachment
+        )
+      : [];
 
     return {
       reply: output.reply,
@@ -54,6 +62,7 @@ export async function POST(req: Request) {
         ? { needed: true, reason: lead.takeoverReason }
         : { needed: false, reason: null },
       leadId: lead.id,
+      attachments,
     };
   });
 }

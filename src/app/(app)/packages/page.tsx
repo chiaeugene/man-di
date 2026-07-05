@@ -1,17 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   IconBook,
   IconCheck,
   IconClock,
+  IconFileText,
   IconImage,
   IconPackage,
+  IconPaperclip,
   IconPlus,
   IconSparkles,
+  IconTrash,
   IconVideo,
 } from "@/components/Icons";
 import { useI18n } from "@/lib/i18n/LocaleProvider";
+
+interface Attachment {
+  id: string;
+  packageId: string;
+  fileName: string;
+  label: string | null;
+  fileType: string;
+  mimeType: string;
+  sizeBytes: number;
+  url: string;
+}
 
 interface Pkg {
   id: string;
@@ -25,6 +39,7 @@ interface Pkg {
   addOns: { name: string; priceMyr: number }[];
   description: string | null;
   isActive: boolean;
+  attachments: Attachment[];
 }
 
 interface Rules {
@@ -58,6 +73,10 @@ export default function PackagesPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [rulesSaved, setRulesSaved] = useState(false);
+  const [labelDrafts, setLabelDrafts] = useState<Record<string, string>>({});
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     fetch("/api/packages").then((r) => r.json()).then((d) => setPackages(d.packages ?? []));
@@ -136,6 +155,38 @@ export default function PackagesPage() {
     if (!confirm(t("packages.deleteConfirm"))) return;
     const res = await fetch(`/api/packages/${id}`, { method: "DELETE" });
     if (res.ok) setPackages((ps) => ps.filter((p) => p.id !== id));
+  }
+
+  async function uploadAttachment(packageId: string, file: File) {
+    setAttachmentError(null);
+    setUploadingId(packageId);
+    const form = new FormData();
+    form.append("file", file);
+    const label = labelDrafts[packageId]?.trim();
+    if (label) form.append("label", label);
+    const res = await fetch(`/api/packages/${packageId}/attachments`, { method: "POST", body: form });
+    const data = await res.json();
+    setUploadingId(null);
+    if (!res.ok) {
+      setAttachmentError(data.error ?? "Upload failed.");
+      return;
+    }
+    setPackages((ps) =>
+      ps.map((p) => (p.id === packageId ? { ...p, attachments: [...p.attachments, data.attachment] } : p))
+    );
+    setLabelDrafts((d) => ({ ...d, [packageId]: "" }));
+  }
+
+  async function removeAttachment(packageId: string, attachmentId: string) {
+    if (!confirm(t("packages.deleteAttachmentConfirm"))) return;
+    const res = await fetch(`/api/packages/${packageId}/attachments/${attachmentId}`, { method: "DELETE" });
+    if (res.ok) {
+      setPackages((ps) =>
+        ps.map((p) =>
+          p.id === packageId ? { ...p, attachments: p.attachments.filter((a) => a.id !== attachmentId) } : p
+        )
+      );
+    }
   }
 
   async function saveRules() {
@@ -230,6 +281,12 @@ export default function PackagesPage() {
         </form>
       )}
 
+      {attachmentError && (
+        <p className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          {attachmentError}
+        </p>
+      )}
+
       {packages.length === 0 && !showForm ? (
         <div className="rounded-3xl border border-dashed border-rose-200 bg-white/70 p-12 text-center shadow-petal">
           <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 text-rose-500">
@@ -292,6 +349,66 @@ export default function PackagesPage() {
                   {p.addOns.map((a) => `${a.name} (RM${a.priceMyr})`).join(" · ")}
                 </p>
               )}
+
+              <div className="relative mt-4 border-t border-rose-50 pt-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-wine-soft/50">
+                  {t("packages.attachments")}
+                </p>
+                <p className="mt-1 text-xs text-wine-soft/50">{t("packages.attachmentsHint")}</p>
+                {p.attachments.length > 0 && (
+                  <ul className="mt-2.5 space-y-1.5">
+                    {p.attachments.map((a) => (
+                      <li key={a.id} className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50/40 px-3 py-2 text-xs text-wine">
+                        {a.fileType === "PHOTO" ? (
+                          <IconImage size={14} className="shrink-0 text-rose-400" />
+                        ) : (
+                          <IconFileText size={14} className="shrink-0 text-rose-400" />
+                        )}
+                        <a href={a.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate hover:underline">
+                          {a.label || a.fileName}
+                        </a>
+                        <button
+                          onClick={() => removeAttachment(p.id, a.id)}
+                          aria-label={t("common.delete")}
+                          className="shrink-0 cursor-pointer text-wine-soft/40 transition-colors duration-150 hover:text-red-600"
+                        >
+                          <IconTrash size={13} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="mt-2.5 flex items-center gap-2">
+                  <input
+                    value={labelDrafts[p.id] ?? ""}
+                    onChange={(e) => setLabelDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
+                    placeholder={t("packages.attachmentLabelPlaceholder")}
+                    className="min-w-0 flex-1 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+                  />
+                  <input
+                    ref={(el) => {
+                      fileInputs.current[p.id] = el;
+                    }}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file) uploadAttachment(p.id, file);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputs.current[p.id]?.click()}
+                    disabled={uploadingId === p.id}
+                    className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-wine-soft transition-colors duration-150 hover:bg-rose-50 disabled:opacity-50"
+                  >
+                    <IconPaperclip size={13} />
+                    {uploadingId === p.id ? t("common.loading") : t("packages.addAttachment")}
+                  </button>
+                </div>
+              </div>
             </div>
           ))}
         </div>

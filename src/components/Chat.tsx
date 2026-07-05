@@ -1,12 +1,43 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconHeartFilled, IconSend, IconSparkles } from "@/components/Icons";
+import { IconHeartFilled, IconSend, IconSparkles, IconFileText } from "@/components/Icons";
+
+export interface ChatAttachment {
+  id: string;
+  fileName: string;
+  fileType: string; // PHOTO | PDF
+  mimeType: string;
+  url: string;
+}
 
 export interface ChatMsg {
   role: "mandy" | "me" | "system";
   content: string;
   badge?: string;
+  attachments?: ChatAttachment[];
+}
+
+function AttachmentBubble({ a }: { a: ChatAttachment }) {
+  if (a.fileType === "PHOTO") {
+    return (
+      <a href={a.url} target="_blank" rel="noreferrer" className="mt-2 block max-w-[220px] overflow-hidden rounded-2xl border border-rose-100">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={a.url} alt={a.fileName} className="block w-full" />
+      </a>
+    );
+  }
+  return (
+    <a
+      href={a.url}
+      target="_blank"
+      rel="noreferrer"
+      className="mt-2 flex max-w-[220px] items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs font-medium text-wine transition-colors duration-150 hover:bg-rose-100"
+    >
+      <IconFileText size={16} className="shrink-0 text-rose-500" />
+      <span className="truncate">{a.fileName}</span>
+    </a>
+  );
 }
 
 function MandyAvatar() {
@@ -82,6 +113,9 @@ export function ChatWindow({
                   </div>
                 )}
                 {m.content}
+                {m.attachments?.map((a) => (
+                  <AttachmentBubble key={a.id} a={a} />
+                ))}
               </div>
             </div>
           )

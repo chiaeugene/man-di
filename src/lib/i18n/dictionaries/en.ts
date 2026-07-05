@@ -167,6 +167,13 @@ const en = {
     overtimeFeeRulesPlaceholder: "RM300 per additional hour, billed in 30-min blocks.",
     saveFeeRules: "Save fee rules",
     deleteConfirm: "Delete this package? Mandy will stop offering it.",
+    attachments: "Attachments",
+    attachmentsHint: "Photos or PDFs Mandy can send during a chat when she judges it helps (e.g. a price sheet or sample gallery).",
+    addAttachment: "Add photo/PDF",
+    attachmentLabelPlaceholder: "What is this? e.g. \"Price list PDF\"",
+    attachmentTooLarge: "File is too large (max 8MB).",
+    attachmentBadType: "Only JPEG, PNG, WEBP images or PDF files are allowed.",
+    deleteAttachmentConfirm: "Remove this attachment?",
   },
   settings: {
     eyebrow: "Everything Mandy knows",

@@ -25,6 +25,7 @@ export async function PATCH(req: Request, { params }: Params) {
         ...(deliverables !== undefined ? { deliverables: toJson(deliverables) } : {}),
         ...(addOns !== undefined ? { addOns: toJson(addOns) } : {}),
       },
+      include: { attachments: { orderBy: { sortOrder: "asc" } } },
     });
     return { package: serializePackage(updated) };
   });
