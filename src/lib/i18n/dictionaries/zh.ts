@@ -186,6 +186,8 @@ const zh: typeof en = {
     salesBrainDesc: "Mandy 销售的方式 — 规则、异议处理与底线。",
     bookingBrain: "预订大脑",
     bookingBrainDesc: "Mandy 促成预订的方式 — 订金、付款与档期规则。",
+    whatsapp: "WhatsApp 连接",
+    whatsappDesc: "当您透过 Meta 连接好 WhatsApp Business 电话号码后（第三阶段）再填写这里。暂时留空也没关系，Mandy 在测试对话中一样可以正常使用。",
     dangerZone: "危险操作区",
     restartInterview: "重新开始设置访谈",
     restartInterviewDesc: "清除您的访谈答案，从第一题重新开始。您的套餐及其他手动修改内容将会保留。",
@@ -221,6 +223,7 @@ const zh: typeof en = {
       consultationRules: "咨询通话规则",
       availabilityRules: "档期规则",
       humanOnlyTopics: "必须交由真人处理的情况",
+      whatsappPhoneId: "WhatsApp 电话号码 ID",
     },
     placeholders: {
       photographerName: "例如：陈伟乐",
@@ -252,6 +255,7 @@ const zh: typeof en = {
       consultationRules: "例如：当客户认真考虑时，提供 15 分钟免费通话",
       availabilityRules: "例如：一定要先跟我确认；农历新年档期一律客满",
       humanOnlyTopics: "例如：多日/海外婚礼定制、退款、媒体邀约",
+      whatsappPhoneId: "例如：109876543210123（来自 Meta 的 WhatsApp API 后台）",
     },
   },
   training: {

@@ -187,6 +187,8 @@ const en = {
     salesBrainDesc: "How Mandy sells — rules, objection handling, and boundaries.",
     bookingBrain: "Booking Brain",
     bookingBrainDesc: "How Mandy closes — deposit, payment, and availability rules.",
+    whatsapp: "WhatsApp connection",
+    whatsappDesc: "Set this once you have a WhatsApp Business phone number connected via Meta (Phase 3). Leave blank for now — Mandy keeps working in the Playground either way.",
     dangerZone: "Danger zone",
     restartInterview: "Restart setup interview",
     restartInterviewDesc: "Wipes your interview answers and starts fresh from question 1. Your packages and any manual edits here are kept.",
@@ -222,6 +224,7 @@ const en = {
       consultationRules: "Consultation call rules",
       availabilityRules: "Availability rules",
       humanOnlyTopics: "Always hand to human for",
+      whatsappPhoneId: "WhatsApp Phone Number ID",
     },
     placeholders: {
       photographerName: "e.g. Aiman Rashid",
@@ -253,6 +256,7 @@ const en = {
       consultationRules: "e.g. Offer a free 15-min call once the customer is seriously considering",
       availabilityRules: "e.g. Always check with me first; CNY period is always fully booked",
       humanOnlyTopics: "e.g. Custom multi-day/overseas weddings, refunds, press requests",
+      whatsappPhoneId: "e.g. 109876543210123 (from Meta's WhatsApp API dashboard)",
     },
   },
   training: {

@@ -129,6 +129,7 @@ export async function recordExchange(opts: {
   customerMessage: string;
   output: EngineOutput;
   attachmentIds?: string[];
+  externalMessageId?: string; // e.g. WhatsApp wamid, for redelivery dedupe
 }) {
   await prisma.$transaction([
     prisma.message.create({
@@ -136,6 +137,7 @@ export async function recordExchange(opts: {
         conversationId: opts.conversationId,
         role: "CUSTOMER",
         content: opts.customerMessage,
+        externalId: opts.externalMessageId,
       },
     }),
     prisma.message.create({

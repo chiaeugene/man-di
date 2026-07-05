@@ -202,6 +202,7 @@ model Message {
   content String
   meta    String? // JSON: extracted facts, suggestedStatus, takeover verdict, detectedLanguage
   attachmentIds String? // JSON string[] of PackageAttachment ids sent with this message
+  externalId    String? @unique // e.g. WhatsApp wamid — dedupes redelivered webhook events
 
   createdAt DateTime @default(now())
 

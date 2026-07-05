@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconHeart, IconSparkles, IconWallet } from "@/components/Icons";
+import { IconHeart, IconSparkles, IconWallet, IconChat } from "@/components/Icons";
 import { useI18n } from "@/lib/i18n/LocaleProvider";
 
 type Brain = Record<string, string>;
@@ -11,6 +11,7 @@ interface SettingsData {
   brandBrain: Brain;
   salesBrain: Brain;
   bookingBrain: Brain;
+  whatsappPhoneId: string;
 }
 
 const BRAND_KEYS = [
@@ -77,7 +78,12 @@ export default function SettingsPage() {
     fetch("/api/settings")
       .then((r) => r.json())
       .then((d) =>
-        setData({ brandBrain: d.brandBrain ?? {}, salesBrain: d.salesBrain ?? {}, bookingBrain: d.bookingBrain ?? {} })
+        setData({
+          brandBrain: d.brandBrain ?? {},
+          salesBrain: d.salesBrain ?? {},
+          bookingBrain: d.bookingBrain ?? {},
+          whatsappPhoneId: d.whatsappPhoneId ?? "",
+        })
       );
   }, []);
 
@@ -109,7 +115,7 @@ export default function SettingsPage() {
   if (!data) return <p className="text-sm text-wine-soft/50">{t("common.loading")}</p>;
 
   const renderSection = (
-    brainKey: keyof SettingsData,
+    brainKey: "brandBrain" | "salesBrain" | "bookingBrain",
     keys: readonly string[]
   ) => {
     const { Icon, color } = SECTION_META[brainKey];
@@ -164,6 +170,26 @@ export default function SettingsPage() {
         {renderSection("brandBrain", BRAND_KEYS)}
         {renderSection("salesBrain", SALES_KEYS)}
         {renderSection("bookingBrain", BOOKING_KEYS)}
+
+        <section className="rounded-3xl border border-rose-100 bg-white p-6 shadow-petal">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-emerald-600"><IconChat size={15} /></span>
+            <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-wine-soft">{t("settings.whatsapp")}</h2>
+          </div>
+          <p className="mb-5 text-xs text-wine-soft/50">{t("settings.whatsappDesc")}</p>
+          <div>
+            <label htmlFor="whatsappPhoneId" className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
+              {t("settings.fields.whatsappPhoneId")}
+            </label>
+            <input
+              id="whatsappPhoneId"
+              value={data.whatsappPhoneId}
+              onChange={(e) => setData({ ...data, whatsappPhoneId: e.target.value })}
+              placeholder={t("settings.placeholders.whatsappPhoneId")}
+              className="w-full max-w-md rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+            />
+          </div>
+        </section>
 
         <section className="rounded-3xl border border-red-200 bg-red-50/40 p-6 shadow-petal">
           <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-red-700">{t("settings.dangerZone")}</h2>

@@ -21,6 +21,7 @@ export async function GET() {
       bookingBrain: BookingBrainSchema.parse(parseJson(profile.bookingBrain, {})),
       packageRules: PackageRulesSchema.parse(parseJson(profile.packageRules, {})),
       onboardingStatus: profile.onboardingStatus,
+      whatsappPhoneId: profile.whatsappPhoneId,
     };
   });
 }
@@ -30,6 +31,7 @@ const PutSchema = z.object({
   salesBrain: SalesBrainSchema.optional(),
   bookingBrain: BookingBrainSchema.optional(),
   packageRules: PackageRulesSchema.optional(),
+  whatsappPhoneId: z.string().max(60).nullish(),
 });
 
 export async function PUT(req: Request) {
@@ -38,11 +40,12 @@ export async function PUT(req: Request) {
     const body = PutSchema.safeParse(await req.json());
     if (!body.success) throw new ApiError(400, "Invalid settings data.");
 
-    const data: Record<string, string> = {};
+    const data: Record<string, string | null> = {};
     if (body.data.brandBrain) data.brandBrain = toJson(body.data.brandBrain);
     if (body.data.salesBrain) data.salesBrain = toJson(body.data.salesBrain);
     if (body.data.bookingBrain) data.bookingBrain = toJson(body.data.bookingBrain);
     if (body.data.packageRules) data.packageRules = toJson(body.data.packageRules);
+    if (body.data.whatsappPhoneId !== undefined) data.whatsappPhoneId = body.data.whatsappPhoneId?.trim() || null;
 
     const updated = await prisma.photographerProfile.update({
       where: { id: profile.id },
@@ -54,6 +57,7 @@ export async function PUT(req: Request) {
       salesBrain: SalesBrainSchema.parse(parseJson(updated.salesBrain, {})),
       bookingBrain: BookingBrainSchema.parse(parseJson(updated.bookingBrain, {})),
       packageRules: PackageRulesSchema.parse(parseJson(updated.packageRules, {})),
+      whatsappPhoneId: updated.whatsappPhoneId,
     };
   });
 }

@@ -186,6 +186,8 @@ const ms: typeof en = {
     salesBrainDesc: "Cara Mandy menjual — peraturan, cara mengendalikan bantahan, dan batasan.",
     bookingBrain: "Otak Tempahan",
     bookingBrainDesc: "Cara Mandy menutup jualan — deposit, pembayaran, dan peraturan ketersediaan.",
+    whatsapp: "Sambungan WhatsApp",
+    whatsappDesc: "Tetapkan ini sebaik sahaja anda mempunyai nombor telefon WhatsApp Business yang disambungkan melalui Meta (Fasa 3). Biarkan kosong buat masa ini — Mandy tetap berfungsi dalam Playground.",
     dangerZone: "Zon berbahaya",
     restartInterview: "Mulakan semula sesi temu bual",
     restartInterviewDesc: "Memadam jawapan temu bual anda dan bermula semula dari soalan 1. Pakej dan perubahan manual lain akan dikekalkan.",
@@ -221,6 +223,7 @@ const ms: typeof en = {
       consultationRules: "Peraturan panggilan konsultasi",
       availabilityRules: "Peraturan ketersediaan",
       humanOnlyTopics: "Sentiasa serahkan kepada manusia untuk",
+      whatsappPhoneId: "ID Nombor Telefon WhatsApp",
     },
     placeholders: {
       photographerName: "cth. Aiman Rashid",
@@ -252,6 +255,7 @@ const ms: typeof en = {
       consultationRules: "cth. Tawarkan panggilan percuma 15 minit apabila pelanggan serius mempertimbangkan",
       availabilityRules: "cth. Sentiasa semak dengan saya dahulu; musim Tahun Baru Cina sentiasa penuh",
       humanOnlyTopics: "cth. Perkahwinan pelbagai hari/luar negara tersuai, bayaran balik, permintaan media",
+      whatsappPhoneId: "cth. 109876543210123 (daripada papan pemuka API WhatsApp Meta)",
     },
   },
   training: {
