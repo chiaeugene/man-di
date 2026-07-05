@@ -3,19 +3,29 @@ import { requireProfile } from "@/lib/tenant";
 import { handle } from "@/lib/api";
 import { toJson } from "@/lib/json";
 
-// Wipes interview progress so the photographer can redo the setup interview
-// from question 1. Packages and any manual brain edits are left untouched —
-// only the raw interview answers + progress are reset; re-completing the
-// interview will recompile brand/sales/booking brains over them again.
+// Wipes the setup interview so the photographer can start fresh: clears the
+// ONBOARDING conversation transcript and resets all four brains, since with
+// the AI-led interview those are built live, turn by turn, as the interview
+// itself. Packages (the Package Builder) are untouched.
 export async function POST() {
   return handle(async () => {
     const profile = await requireProfile();
+
+    const conversation = await prisma.conversation.findFirst({
+      where: { profileId: profile.id, kind: "ONBOARDING" },
+    });
+    if (conversation) {
+      await prisma.message.deleteMany({ where: { conversationId: conversation.id } });
+    }
+
     await prisma.photographerProfile.update({
       where: { id: profile.id },
       data: {
         onboardingStatus: "NOT_STARTED",
-        onboardingStep: 0,
-        onboardingAnswers: toJson({}),
+        brandBrain: toJson({}),
+        salesBrain: toJson({}),
+        bookingBrain: toJson({}),
+        packageRules: toJson({}),
       },
     });
     return { ok: true };

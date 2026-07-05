@@ -91,3 +91,19 @@ export const EngineOutputSchema = z.object({
   sendAttachmentIds: z.array(z.string()).catch([]).default([]),
 });
 export type EngineOutput = z.infer<typeof EngineOutputSchema>;
+
+// ---------- AI-led setup interview output contract ----------
+
+export const InterviewOutputSchema = z.object({
+  reply: z.string(),
+  extracted: z
+    .object({
+      brandBrain: BrandBrainSchema.optional(),
+      salesBrain: SalesBrainSchema.optional(),
+      bookingBrain: BookingBrainSchema.optional(),
+      packageRules: PackageRulesSchema.optional(),
+    })
+    .catch({}),
+  readyToWrapUp: z.boolean().catch(false),
+});
+export type InterviewOutput = z.infer<typeof InterviewOutputSchema>;

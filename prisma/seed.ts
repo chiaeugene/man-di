@@ -25,7 +25,6 @@ async function main() {
           city: "Petaling Jaya",
           state: "Selangor",
           onboardingStatus: "COMPLETED",
-          onboardingStep: 27, // = number of onboarding questions (all answered)
           brandBrain: J({
             photographerName: "U Wang",
             studioName: "U Signature",

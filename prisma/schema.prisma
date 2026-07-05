@@ -36,9 +36,7 @@ model PhotographerProfile {
   country          String  @default("Malaysia")
 
   // ONBOARDING: NOT_STARTED | INTERVIEW | TRAINING | COMPLETED
-  onboardingStatus  String @default("NOT_STARTED")
-  onboardingStep    Int    @default(0)
-  onboardingAnswers String @default("{}") // raw interview answers keyed by step id (JSON)
+  onboardingStatus String @default("NOT_STARTED")
 
   // The four brains (JSON, zod-validated in src/lib/ai/schemas.ts).
   // Package Brain = Package rows + packageRules.
@@ -54,10 +52,11 @@ model PhotographerProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  packages         Package[]
-  trainingExamples TrainingExample[]
-  leads            Lead[]
-  conversations    Conversation[]
+  packages           Package[]
+  trainingExamples   TrainingExample[]
+  leads              Lead[]
+  conversations      Conversation[]
+  onboardingDocuments OnboardingDocument[]
 }
 
 model Package {
@@ -104,6 +103,27 @@ model PackageAttachment {
   createdAt DateTime @default(now())
 
   @@index([packageId])
+  @@index([profileId])
+}
+
+// Reference material (PDF, pasted text, or a fetched URL) the photographer
+// supplies during the AI-led setup interview. Supplementary only — the
+// interview prompt treats extractedText as untrusted, unverified content.
+model OnboardingDocument {
+  id        String              @id @default(cuid())
+  profileId String
+  profile   PhotographerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  fileName      String
+  sourceType    String // FILE | URL
+  sourceUrl     String?
+  mimeType      String?
+  data          Bytes?
+  extractedText String
+  sizeBytes     Int
+
+  createdAt DateTime @default(now())
+
   @@index([profileId])
 }
 
