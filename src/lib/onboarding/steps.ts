@@ -41,6 +41,8 @@ const STEP_ORDER = [
   "consultationRules",
   "availabilityRules",
   "humanOnlyTopics",
+  "conversationStrategy",
+  "upsellStrategy",
 ] as const;
 
 const SECTIONS: Record<(typeof STEP_ORDER)[number], OnboardingSection> = {
@@ -71,6 +73,8 @@ const SECTIONS: Record<(typeof STEP_ORDER)[number], OnboardingSection> = {
   consultationRules: "booking",
   availabilityRules: "booking",
   humanOnlyTopics: "booking",
+  conversationStrategy: "sales",
+  upsellStrategy: "sales",
 };
 
 const QUESTIONS_EN: Record<(typeof STEP_ORDER)[number], string> = {
@@ -123,7 +127,11 @@ const QUESTIONS_EN: Record<(typeof STEP_ORDER)[number], string> = {
   availabilityRules:
     "How should I handle date availability? For now I can't see your calendar, so my default is: \"let me check with you and confirm\". Anything to add? (e.g. always fully booked on CNY, only 4 weddings per month...)",
   humanOnlyTopics:
-    "Last question! 🎉 Which situations should I ALWAYS pass to you instead of handling myself? (besides my defaults: custom discounts, angry customers, refunds, and anything I'm unsure about)",
+    "Which situations should I ALWAYS pass to you instead of handling myself? (besides my defaults: custom discounts, angry customers, refunds, and anything I'm unsure about)",
+  conversationStrategy:
+    "Two optional ones left — skip anytime if you're not sure, we can refine later in Settings. Before quoting, I like to first understand *why* the customer wants this shoot (occasion, who's involved, what they're hoping for or worried about). Is there anything specific YOU always like to find out about a customer before recommending a package?",
+  upsellStrategy:
+    "Last one! 🎉 Once a customer has picked or is leaning toward a package, I may suggest a better-fitting upgrade — but only once, and only if it's a genuine fit. Any specific upsell moments or offers you want me to know about? (e.g. suggest the album add-on once they've picked a package, or nothing — totally fine to skip)",
 };
 
 const QUESTIONS_ZH: Record<(typeof STEP_ORDER)[number], string> = {
@@ -173,7 +181,11 @@ const QUESTIONS_ZH: Record<(typeof STEP_ORDER)[number], string> = {
   availabilityRules:
     "我该怎么处理档期查询？目前我看不到你的日历，所以默认回复是：「让我确认后再回复你」。有什么要补充的吗？（例如：农历新年档期一定客满、每月只接 4 场婚礼……）",
   humanOnlyTopics:
-    "最后一个问题！🎉 除了我默认会转交给你处理的情况（自订折扣、生气的客户、退款、以及任何我不确定的事）之外，还有哪些情况你希望我一定要转交给你处理？",
+    "除了我默认会转交给你处理的情况（自订折扣、生气的客户、退款、以及任何我不确定的事）之外，还有哪些情况你希望我一定要转交给你处理？",
+  conversationStrategy:
+    "还剩两个可选问题 — 不确定的话随时可以跳过，之后也能在「设置」里补充。在报价之前，我喜欢先了解客户「为什么」想拍这次的照片（场合、有谁参与、他们期待或担心什么）。你自己在推荐套餐之前，通常会想先了解客户的哪些事情？",
+  upsellStrategy:
+    "最后一个！🎉 当客户已经选定或倾向某个套餐时，我可能会建议更合适的升级方案 — 但只会提一次，而且只在真的合适的时候。有没有特定的升级时机或优惠想让我知道？（例如：客户选好套餐后建议加购相册，或完全没有 — 跳过也没问题）",
 };
 
 const QUESTIONS_MS: Record<(typeof STEP_ORDER)[number], string> = {
@@ -224,7 +236,11 @@ const QUESTIONS_MS: Record<(typeof STEP_ORDER)[number], string> = {
   availabilityRules:
     "Bagaimana saya patut mengendalikan pertanyaan ketersediaan tarikh? Buat masa ini saya tidak dapat melihat kalendar anda, jadi lalai saya ialah: \"biar saya semak dengan anda dan sahkan\". Ada apa-apa nak ditambah? (cth. sentiasa penuh semasa Tahun Baru Cina, hanya 4 perkahwinan sebulan...)",
   humanOnlyTopics:
-    "Soalan terakhir! 🎉 Situasi manakah yang anda mahu saya SENTIASA serahkan kepada anda dan bukan uruskan sendiri? (selain lalai saya: diskaun khas, pelanggan marah, bayaran balik, dan apa-apa yang saya tidak pasti)",
+    "Situasi manakah yang anda mahu saya SENTIASA serahkan kepada anda dan bukan uruskan sendiri? (selain lalai saya: diskaun khas, pelanggan marah, bayaran balik, dan apa-apa yang saya tidak pasti)",
+  conversationStrategy:
+    "Dua soalan pilihan lagi — langkau sahaja jika tidak pasti, kita boleh tambah baik kemudian dalam Tetapan. Sebelum memberi sebut harga, saya suka memahami dahulu *sebab* pelanggan mahukan sesi ini (majlis, siapa yang terlibat, apa yang mereka harapkan atau risaukan). Ada apa-apa yang ANDA sentiasa suka tahu tentang pelanggan sebelum mengesyorkan pakej?",
+  upsellStrategy:
+    "Soalan terakhir! 🎉 Apabila pelanggan sudah memilih atau cenderung kepada satu pakej, saya mungkin akan mencadangkan naik taraf yang lebih sesuai — tetapi hanya sekali, dan hanya jika benar-benar sesuai. Ada momen atau tawaran naik taraf tertentu yang anda mahu saya tahu? (cth. cadangkan tambahan album selepas mereka memilih pakej, atau tiada — boleh langkau sahaja)",
 };
 
 const QUESTIONS: Record<Locale, Record<string, string>> = {

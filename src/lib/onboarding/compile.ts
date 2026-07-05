@@ -29,6 +29,8 @@ export async function compileBrains(profile: PhotographerProfile): Promise<void>
     allowedToSay: a.allowedToSay ?? "",
     neverSay: a.neverSay ?? "",
     salesPressure: normalizePressure(a.salesPressure),
+    conversationStrategy: a.conversationStrategy ?? "",
+    upsellStrategy: a.upsellStrategy ?? "",
   };
 
   const bookingBrain = {

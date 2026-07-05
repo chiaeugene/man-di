@@ -9,7 +9,17 @@ import { chatComplete, llmConfigured } from "@/lib/ai/llm";
 import { getServerLocale } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
 
-const BodySchema = z.object({ message: z.string().min(1).max(4000) });
+const BodySchema = z
+  .object({ message: z.string().max(4000).optional(), skip: z.boolean().optional() })
+  .refine((d) => d.skip || (d.message && d.message.trim().length > 0), {
+    message: "Message is required.",
+  });
+
+const SKIP_ACK: Record<Locale, string> = {
+  en: "No problem, skipping that — we can always add it later in Settings. 👍",
+  zh: "没问题，先跳过 — 之后随时可以在「设置」里补充。👍",
+  ms: "Tiada masalah, langkau dahulu — kita boleh tambah kemudian dalam Tetapan. 👍",
+};
 
 // Photographer answers the current question → store, advance, return Mandy's
 // acknowledgement + next question. On the last answer, compile the brains.
@@ -28,7 +38,8 @@ export async function POST(req: Request) {
 
     const current = steps[step];
     const answers = parseJson<Record<string, string>>(profile.onboardingAnswers, {});
-    answers[current.id] = body.data.message.trim();
+    const skipped = Boolean(body.data.skip);
+    answers[current.id] = skipped ? "" : body.data.message!.trim();
 
     const nextStep = step + 1;
     const done = nextStep >= steps.length;
@@ -45,7 +56,9 @@ export async function POST(req: Request) {
     if (done) await compileBrains(updated);
 
     const next = done ? null : steps[nextStep];
-    const ack = await buildAck(current.question, body.data.message, done, locale);
+    const ack = skipped
+      ? SKIP_ACK[locale] ?? SKIP_ACK.en
+      : await buildAck(current.question, body.data.message!, done, locale);
 
     return {
       ack,

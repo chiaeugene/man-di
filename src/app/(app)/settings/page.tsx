@@ -29,6 +29,8 @@ const BRAND_KEYS = [
 ] as const;
 
 const SALES_KEYS = [
+  "conversationStrategy",
+  "upsellStrategy",
   "discountRules",
   "followUpRules",
   "allowedToSay",
@@ -111,13 +113,30 @@ export default function SettingsPage() {
         <p className="mb-5 text-xs text-wine-soft/50">{t(`settings.${brainKey}Desc`)}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           {keys.map((key) => (
-            <div key={key} className={key === "paymentInstructions" || key === "styleProfile" ? "sm:col-span-2" : ""}>
+            <div
+              key={key}
+              className={
+                key === "paymentInstructions" ||
+                key === "styleProfile" ||
+                key === "conversationStrategy" ||
+                key === "upsellStrategy"
+                  ? "sm:col-span-2"
+                  : ""
+              }
+            >
               <label htmlFor={`${brainKey}-${key}`} className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
                 {t(`settings.fields.${key}`)}
               </label>
               <textarea
                 id={`${brainKey}-${key}`}
-                rows={key === "paymentInstructions" || key === "styleProfile" ? 4 : 2}
+                rows={
+                  key === "paymentInstructions" ||
+                  key === "styleProfile" ||
+                  key === "conversationStrategy" ||
+                  key === "upsellStrategy"
+                    ? 4
+                    : 2
+                }
                 value={data[brainKey][key] ?? ""}
                 onChange={(e) =>
                   setData({ ...data, [brainKey]: { ...data[brainKey], [key]: e.target.value } })

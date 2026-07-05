@@ -46,14 +46,14 @@ export default function OnboardingPage() {
       });
   }, [locale]);
 
-  async function send(text: string) {
-    setMessages((m) => [...m, { role: "me", content: text }]);
+  async function submit(body: { message: string } | { skip: true }) {
+    if ("message" in body) setMessages((m) => [...m, { role: "me", content: body.message }]);
     setBusy(true);
     try {
       const res = await fetch("/api/onboarding/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -75,6 +75,14 @@ export default function OnboardingPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function send(text: string) {
+    return submit({ message: text });
+  }
+
+  function skip() {
+    return submit({ skip: true });
   }
 
   const pct = Math.round((progress.step / progress.total) * 100);
@@ -116,13 +124,24 @@ export default function OnboardingPage() {
       )}
 
       {loaded ? (
-        <ChatWindow
-          messages={messages}
-          onSend={send}
-          busy={busy}
-          disabled={done || !next}
-          placeholder={done ? t("onboarding.interviewCompletePlaceholder") : t("onboarding.typeAnswer")}
-        />
+        <>
+          <ChatWindow
+            messages={messages}
+            onSend={send}
+            busy={busy}
+            disabled={done || !next}
+            placeholder={done ? t("onboarding.interviewCompletePlaceholder") : t("onboarding.typeAnswer")}
+          />
+          {!done && next && (
+            <button
+              onClick={skip}
+              disabled={busy}
+              className="mt-3 cursor-pointer text-xs font-medium text-wine-soft/50 underline-offset-2 transition-colors duration-150 hover:text-rose-600 hover:underline disabled:opacity-50"
+            >
+              {t("onboarding.skipQuestion")}
+            </button>
+          )}
+        </>
       ) : (
         <p className="text-sm text-wine-soft/50">{t("common.loading")}</p>
       )}

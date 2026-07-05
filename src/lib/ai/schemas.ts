@@ -30,6 +30,10 @@ export const SalesBrainSchema = z
     salesPressure: z.string().default("balanced"), // soft | balanced | assertive
     objectionStyle: z.string().default(""),
     styleProfile: z.string().default(""), // synthesized from training examples
+    // Business-specific notes layered on top of the baked-in discovery-first
+    // and upsell playbooks in prompts.ts (see buildMandySystemPrompt).
+    conversationStrategy: z.string().default(""),
+    upsellStrategy: z.string().default(""),
   })
   .partial()
   .default({});
