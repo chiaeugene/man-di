@@ -17,12 +17,15 @@ export class LlmNotConfiguredError extends Error {
 
 // Full auto-reply pipeline: load tenant brains → compile prompt → call LLM →
 // parse output contract → apply guarded side effects (lead facts, status, takeover).
-// Used by the playground now; the WhatsApp webhook (Phase 2) calls the same function.
+// Used by the playground, the WhatsApp webhook, and the release-resume flow.
+// customerMessage: null means "reply to the conversation as it stands" — used
+// when the photographer hands a lead back to Mandy and the last message is an
+// unanswered customer message already stored in history.
 export async function generateMandyReply(opts: {
   profile: PhotographerProfile;
   lead: Lead;
   conversationId: string;
-  customerMessage: string;
+  customerMessage: string | null;
 }): Promise<{ reply: string; output: EngineOutput; lead: Lead; attachmentIds: string[] }> {
   const { profile, lead, conversationId, customerMessage } = opts;
 
@@ -52,20 +55,50 @@ export async function generateMandyReply(opts: {
 
   const system = buildMandySystemPrompt({ profile, packages, trainingExamples, lead });
 
-  const messages: ChatMessage[] = history
-    .filter((m) => m.role === "CUSTOMER" || m.role === "MANDY" || m.role === "PHOTOGRAPHER")
-    .map((m) => ({
-      role: m.role === "CUSTOMER" ? ("user" as const) : ("assistant" as const),
-      content: m.content,
-    }));
-  messages.push({ role: "user", content: customerMessage });
+  const messages: ChatMessage[] = [];
+  for (const m of history) {
+    if (m.role !== "CUSTOMER" && m.role !== "MANDY" && m.role !== "PHOTOGRAPHER") continue;
+    const role = m.role === "CUSTOMER" ? ("user" as const) : ("assistant" as const);
+    const last = messages[messages.length - 1];
+    // Consecutive same-role turns happen when customer messages pile up during
+    // a human takeover — merge them so the API sees clean alternation.
+    if (last && last.role === role) last.content += `\n${m.content}`;
+    else messages.push({ role, content: m.content });
+  }
+  if (customerMessage !== null) {
+    const last = messages[messages.length - 1];
+    if (last && last.role === "user") last.content += `\n${customerMessage}`;
+    else messages.push({ role: "user", content: customerMessage });
+  }
 
   const raw = await chatComplete({ system, messages, maxTokens: 1200, temperature: 0.7 });
 
-  const parsed = EngineOutputSchema.safeParse(extractJson(raw));
+  let parsed = EngineOutputSchema.safeParse(extractJson(raw));
+  if (!parsed.success) {
+    // Contract violation (plain prose instead of JSON). Retry once with the
+    // bad output shown back and a pointed correction — this recovers nearly
+    // all cases without punishing the conversation with a takeover.
+    const retryRaw = await chatComplete({
+      system,
+      messages: [
+        ...messages,
+        { role: "assistant", content: raw },
+        {
+          role: "user",
+          content:
+            "SYSTEM: Your previous response was not the required JSON object, so it could NOT be delivered to the customer. Re-send that same reply now as ONE valid JSON object exactly matching the mandatory output contract — no other text.",
+        },
+      ],
+      maxTokens: 1200,
+      temperature: 0.3,
+    });
+    parsed = EngineOutputSchema.safeParse(extractJson(retryRaw));
+    if (parsed.success) console.error("[engine] JSON contract violated once; retry succeeded.");
+  }
+
   const output: EngineOutput = parsed.success
     ? parsed.data
-    : // Contract violation → degrade gracefully: use raw text, flag low confidence.
+    : // Still broken after retry → degrade gracefully: use raw text, flag low confidence.
       {
         reply: raw.trim() || "Sorry, give me a moment! 😊",
         detectedLanguage: "en",
@@ -75,6 +108,7 @@ export async function generateMandyReply(opts: {
         confidence: 0.3,
         sendAttachmentIds: [],
       };
+  if (!parsed.success) console.error("[engine] JSON contract violated twice; falling back to raw text + takeover.");
 
   // Guardrail: only allow attachment ids that actually belong to this
   // tenant's active packages — the model can never reference another
@@ -123,23 +157,29 @@ async function applyEngineEffects(lead: Lead, output: EngineOutput): Promise<Lea
   return prisma.lead.update({ where: { id: lead.id }, data });
 }
 
-// Persist one customer→Mandy exchange onto a conversation.
+// Persist one customer→Mandy exchange onto a conversation. customerMessage
+// null = the inbound message was already stored (e.g. it arrived during a
+// human takeover) — record only Mandy's reply.
 export async function recordExchange(opts: {
   conversationId: string;
-  customerMessage: string;
+  customerMessage: string | null;
   output: EngineOutput;
   attachmentIds?: string[];
   externalMessageId?: string; // e.g. WhatsApp wamid, for redelivery dedupe
 }) {
   await prisma.$transaction([
-    prisma.message.create({
-      data: {
-        conversationId: opts.conversationId,
-        role: "CUSTOMER",
-        content: opts.customerMessage,
-        externalId: opts.externalMessageId,
-      },
-    }),
+    ...(opts.customerMessage !== null
+      ? [
+          prisma.message.create({
+            data: {
+              conversationId: opts.conversationId,
+              role: "CUSTOMER",
+              content: opts.customerMessage,
+              externalId: opts.externalMessageId,
+            },
+          }),
+        ]
+      : []),
     prisma.message.create({
       data: {
         conversationId: opts.conversationId,
