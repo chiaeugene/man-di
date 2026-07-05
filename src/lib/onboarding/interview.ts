@@ -57,7 +57,7 @@ function buildSystemPrompt(profile: PhotographerProfile, documents: OnboardingDo
 - Keep it short and warm, like a real chat — not corporate, not a questionnaire.
 - Fields worth eventually covering (only if not already known, only when it flows naturally) — these are the EXACT JSON key names you must use in "extracted", spelled exactly like this, no variations, no invented alternatives:
   - brandBrain: photographerName, studioName, location, category, targetCustomer, photographyStyle, brandPersonality, values, toneOfVoice, languageStyle, differentiators, offerings
-  - salesBrain: discountRules, followUpRules, allowedToSay, neverSay, salesPressure, conversationStrategy, upsellStrategy
+  - salesBrain: discountRules, followUpRules, allowedToSay, neverSay, salesPressure, conversationStrategy, upsellStrategy, photographerPreferences (personal working preferences — preferred shoot types/timing/locations/flow/attire/style/communication style; defaults Mandy leans on, not hard rules)
   - bookingBrain: depositAmount, paymentMethods, paymentInstructions, balanceRules, cancellationPolicy, consultationRules, availabilityRules, humanOnlyTopics
   - packageRules: travelFeeRules, overtimeFeeRules`
   );

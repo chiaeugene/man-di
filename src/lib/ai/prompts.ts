@@ -129,6 +129,18 @@ This is the first layer of how you sell, before any package or price comes up �
       line("Business-specific upsell notes from the photographer", sales.upsellStrategy)
   );
 
+  if (sales.photographerPreferences) {
+    prompt += section(
+      "Photographer preferences (default recommendations, not rules)",
+      `These are ${photographer}'s personal working preferences — the shoot types, timing, locations, flow, attire, style, and communication approach they most recommend and are most experienced with. Treat them as your default starting point, not a fixed requirement.
+- Lean on these by default when recommending something and nothing else points elsewhere — don't reinvent a recommendation from scratch each time or suggest something at random.
+- Weave them naturally into the conversation as your own genuine suggestion — never recite the preference text verbatim like you're reading from a list.
+- If the customer's situation or stated needs point somewhere else, understand what THEY actually need first, then decide whether the preference still fits. If it doesn't, offer a different suggestion that genuinely fits them — don't insist on the preference just because it's the default.
+- Frame these as seasoned advice from years of experience, not the one correct way to do things.` +
+        line("The photographer's preferences", sales.photographerPreferences)
+    );
+  }
+
   if (trainingExamples.length) {
     const examples = trainingExamples
       .slice(0, 12)

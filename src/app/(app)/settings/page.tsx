@@ -31,6 +31,7 @@ const BRAND_KEYS = [
 const SALES_KEYS = [
   "conversationStrategy",
   "upsellStrategy",
+  "photographerPreferences",
   "discountRules",
   "followUpRules",
   "allowedToSay",
@@ -49,6 +50,14 @@ const BOOKING_KEYS = [
   "availabilityRules",
   "humanOnlyTopics",
 ] as const;
+
+const WIDE_KEYS = new Set([
+  "paymentInstructions",
+  "styleProfile",
+  "conversationStrategy",
+  "upsellStrategy",
+  "photographerPreferences",
+]);
 
 const SECTION_META: Record<string, { Icon: typeof IconHeart; color: string }> = {
   brandBrain: { Icon: IconHeart, color: "text-rose-500" },
@@ -113,30 +122,13 @@ export default function SettingsPage() {
         <p className="mb-5 text-xs text-wine-soft/50">{t(`settings.${brainKey}Desc`)}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           {keys.map((key) => (
-            <div
-              key={key}
-              className={
-                key === "paymentInstructions" ||
-                key === "styleProfile" ||
-                key === "conversationStrategy" ||
-                key === "upsellStrategy"
-                  ? "sm:col-span-2"
-                  : ""
-              }
-            >
+            <div key={key} className={WIDE_KEYS.has(key) ? "sm:col-span-2" : ""}>
               <label htmlFor={`${brainKey}-${key}`} className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
                 {t(`settings.fields.${key}`)}
               </label>
               <textarea
                 id={`${brainKey}-${key}`}
-                rows={
-                  key === "paymentInstructions" ||
-                  key === "styleProfile" ||
-                  key === "conversationStrategy" ||
-                  key === "upsellStrategy"
-                    ? 4
-                    : 2
-                }
+                rows={WIDE_KEYS.has(key) ? 4 : 2}
                 value={data[brainKey][key] ?? ""}
                 onChange={(e) =>
                   setData({ ...data, [brainKey]: { ...data[brainKey], [key]: e.target.value } })

@@ -34,6 +34,10 @@ export const SalesBrainSchema = z
     // and upsell playbooks in prompts.ts (see buildMandySystemPrompt).
     conversationStrategy: z.string().default(""),
     upsellStrategy: z.string().default(""),
+    // The photographer's personal working preferences (preferred shoot types,
+    // timing, locations, flow, attire, style, communication style, etc.) —
+    // defaults Mandy leans on, not hard rules.
+    photographerPreferences: z.string().default(""),
   })
   .partial()
   .default({});
