@@ -22,7 +22,7 @@ export async function synthesizeStyleProfile(profile: PhotographerProfile): Prom
   const raw = await chatComplete({
     system: `You analyze how a wedding photographer sells over WhatsApp. From the mock conversations, write a compact style profile (max 180 words, plain text, no headings) covering: overall tone; how they explain value; how they introduce packages; how they handle price objections; how strongly they push toward deposit (soft/balanced/assertive); and their positioning archetype (premium / friendly / emotional / direct / luxury / casual / consultative). Write it as direct instructions to an AI assistant imitating them, e.g. "Speak warmly with light emoji use. When price objections come up, ..."`,
     messages: [{ role: "user", content: transcript.slice(0, 12000) }],
-    maxTokens: 400,
+    maxTokens: 800,
     temperature: 0.3,
   });
 

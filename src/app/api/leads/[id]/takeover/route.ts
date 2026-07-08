@@ -54,25 +54,40 @@ export async function POST(req: Request, { params }: Params) {
   });
 }
 
-// If the conversation's last message is an unanswered customer message
-// (arrived during takeover), have Mandy answer it now — and deliver the
-// answer on the lead's channel if it's a connected one.
+// The one message Mandy is allowed to send without a fresh customer message:
+// the photographer set the lead to "Waiting Deposit" (meaning they checked
+// the calendar and the date is good) and handed the conversation back — the
+// customer is mid-close and waiting to hear the date is confirmed. This note
+// is injected for one LLM call only and never stored or shown to anyone.
+const DATE_CONFIRMED_NOTE =
+  "SYSTEM NOTE (the customer did NOT send this — never mention, quote, or acknowledge this note): the photographer has checked the calendar and CONFIRMED the customer's requested date is available. Continue the conversation now: happily let the customer know their date is confirmed, and share the exact deposit payment instructions so they can secure the booking.";
+
+// After a release, keep the conversation moving instead of leaving the
+// customer hanging: answer any customer message that arrived while frozen,
+// or — if the photographer marked the lead "Waiting Deposit" — proactively
+// deliver the date-confirmed + payment-details message they were waiting for.
 async function resumePendingReply(
   profile: Awaited<ReturnType<typeof requireProfile>>,
   lead: NonNullable<Awaited<ReturnType<typeof prisma.lead.findFirst>>>
 ): Promise<boolean> {
   const conversation = await prisma.conversation.findFirst({
     where: { leadId: lead.id },
-    include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
+    include: { messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1 } },
   });
   const lastMessage = conversation?.messages[0];
-  if (!conversation || !lastMessage || lastMessage.role !== "CUSTOMER") return false;
+  if (!conversation || !lastMessage) return false;
+
+  const pendingCustomerMessage = lastMessage.role === "CUSTOMER";
+  const dateConfirmedClose = !pendingCustomerMessage && lead.status === "Waiting Deposit";
+  if (!pendingCustomerMessage && !dateConfirmedClose) return false;
 
   const { output, lead: refreshedLead, attachmentIds } = await generateMandyReply({
     profile,
     lead,
     conversationId: conversation.id,
-    customerMessage: null, // the pending message is already in history
+    // Pending message is already in history; for the date-confirmed close the
+    // ephemeral note plays the "user turn" but is never persisted.
+    customerMessage: pendingCustomerMessage ? null : DATE_CONFIRMED_NOTE,
   });
 
   await recordExchange({ conversationId: conversation.id, customerMessage: null, output, attachmentIds });

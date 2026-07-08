@@ -31,7 +31,7 @@ export default async function DashboardPage() {
       take: 5,
       include: {
         lead: true,
-        messages: { orderBy: { createdAt: "desc" }, take: 1 },
+        messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1 },
       },
     }),
   ]);

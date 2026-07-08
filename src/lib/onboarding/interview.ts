@@ -126,7 +126,7 @@ export async function getInterviewState(profile: PhotographerProfile) {
   const conversation = await getOrCreateOnboardingConversation(profile.id);
   const messages = await prisma.message.findMany({
     where: { conversationId: conversation.id },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
 
   const transcript = messages.map((m) => ({ role: m.role, content: m.content }));
@@ -150,7 +150,7 @@ export async function runInterviewTurn(profile: PhotographerProfile, userMessage
   const conversation = await getOrCreateOnboardingConversation(profile.id);
   const priorMessages = await prisma.message.findMany({
     where: { conversationId: conversation.id },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     take: HISTORY_LIMIT,
   });
   const documents = await prisma.onboardingDocument.findMany({
@@ -167,7 +167,7 @@ export async function runInterviewTurn(profile: PhotographerProfile, userMessage
     : [{ role: "assistant" as const, content: FIRST_QUESTION }];
   history.push({ role: "user", content: userMessage });
 
-  const raw = await chatComplete({ system, messages: history, maxTokens: 1000, temperature: 0.6 });
+  const raw = await chatComplete({ system, messages: history, maxTokens: 4000, temperature: 0.6 });
   const parsed = InterviewOutputSchema.safeParse(extractJson(raw));
   const output: InterviewOutput = parsed.success
     ? parsed.data

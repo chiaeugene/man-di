@@ -14,7 +14,7 @@ export async function GET(_req: Request, { params }: Params) {
     const lead = await prisma.lead.findFirst({
       where: { id, profileId: profile.id },
       include: {
-        conversation: { include: { messages: { orderBy: { createdAt: "asc" } } } },
+        conversation: { include: { messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } } },
       },
     });
     if (!lead) throw new ApiError(404, "Lead not found.");

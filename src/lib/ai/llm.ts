@@ -45,6 +45,13 @@ export async function chatComplete(opts: {
     messages: opts.messages,
   });
   const block = res.content.find((b) => b.type === "text");
+  if (!block) {
+    console.error(
+      "[llm debug] no text block — stop_reason:", res.stop_reason,
+      "content types:", res.content.map((b) => b.type),
+      "usage:", JSON.stringify(res.usage)
+    );
+  }
   return block && block.type === "text" ? block.text : "";
 }
 

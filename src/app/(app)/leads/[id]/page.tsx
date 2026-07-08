@@ -25,7 +25,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const lead = await prisma.lead.findFirst({
     where: { id, profileId: profile.id },
     include: {
-      conversation: { include: { messages: { orderBy: { createdAt: "asc" } } } },
+      conversation: { include: { messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } } },
     },
   });
   if (!lead) notFound();

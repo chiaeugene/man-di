@@ -48,7 +48,10 @@ export async function generateMandyReply(opts: {
     }),
     prisma.message.findMany({
       where: { conversationId },
-      orderBy: { createdAt: "asc" },
+      // Customer + reply rows are written in one transaction and share a
+      // timestamp — id (creation-ordered cuid) breaks the tie, otherwise the
+      // history can come back with replies sorted before their questions.
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       take: HISTORY_LIMIT,
     }),
   ]);
@@ -71,7 +74,7 @@ export async function generateMandyReply(opts: {
     else messages.push({ role: "user", content: customerMessage });
   }
 
-  const raw = await chatComplete({ system, messages, maxTokens: 1200, temperature: 0.7 });
+  const raw = await chatComplete({ system, messages, maxTokens: 4000, temperature: 0.7 });
 
   let parsed = EngineOutputSchema.safeParse(extractJson(raw));
   if (!parsed.success) {
@@ -89,7 +92,7 @@ export async function generateMandyReply(opts: {
             "SYSTEM: Your previous response was not the required JSON object, so it could NOT be delivered to the customer. Re-send that same reply now as ONE valid JSON object exactly matching the mandatory output contract — no other text.",
         },
       ],
-      maxTokens: 1200,
+      maxTokens: 4000,
       temperature: 0.3,
     });
     parsed = EngineOutputSchema.safeParse(extractJson(retryRaw));
@@ -208,7 +211,7 @@ export async function refreshLeadSummary(profile: PhotographerProfile, lead: Lea
   if (!llmConfigured()) return;
   const history = await prisma.message.findMany({
     where: { conversationId },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     take: HISTORY_LIMIT,
   });
   if (history.length < 4) return;
@@ -222,7 +225,7 @@ export async function refreshLeadSummary(profile: PhotographerProfile, lead: Lea
       system:
         'You summarize sales conversations for a photography CRM. Respond ONLY with JSON: {"summary": "2-3 sentence factual summary", "nextAction": "one concrete recommended next step for the photographer"}',
       messages: [{ role: "user", content: transcript.slice(-6000) }],
-      maxTokens: 300,
+      maxTokens: 600,
       temperature: 0.2,
     });
     const json = extractJson(raw) as { summary?: string; nextAction?: string } | null;
