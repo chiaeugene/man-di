@@ -30,11 +30,45 @@ interface WhatsAppChangeValue {
   messages?: WhatsAppMessage[];
 }
 
+// Real WhatsApp webhook payloads are a few KB at most. This endpoint is
+// public and unauthenticated until the signature check below runs, so it's
+// the one place in the app reachable by anyone on the internet — without a
+// cap, `req.text()` buffers an attacker-supplied body of any size into
+// memory, which crashed the whole server (OOM) rather than just this route.
+const MAX_WEBHOOK_BODY_BYTES = 256 * 1024; // 256KB
+
+// Streams the body in with a hard byte cap instead of buffering it all via
+// req.text() first — rejects oversized payloads before they're fully read,
+// and doesn't trust a declared Content-Length alone (can be missing/wrong).
+async function readBodyWithLimit(req: Request): Promise<string | null> {
+  const declared = Number(req.headers.get("content-length") ?? 0);
+  if (declared > MAX_WEBHOOK_BODY_BYTES) return null;
+
+  const reader = req.body?.getReader();
+  if (!reader) return null;
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_WEBHOOK_BODY_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf-8");
+}
+
 // Meta always expects a fast 200 — it retries deliveries aggressively on any
 // non-200 or slow response, which would otherwise cause duplicate processing.
 // Every step below is wrapped so one bad message never blocks that response.
 export async function POST(req: Request) {
-  const rawBody = await req.text();
+  const rawBody = await readBodyWithLimit(req);
+  if (rawBody === null) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
 
   if (!verifyWhatsAppSignature(rawBody, req.headers.get("x-hub-signature-256"))) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
