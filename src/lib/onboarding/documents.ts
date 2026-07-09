@@ -3,15 +3,14 @@ import dns from "node:dns/promises";
 import { isIP } from "node:net";
 import type { OnboardingDocument } from "@prisma/client";
 
-// Photography price lists/brochures are usually a handful of pages, often
-// with embedded photos — those photos are exactly what makes PDF parsing
-// memory-hungry (the parser still has to load the full page/image structure
-// even though we only want text back out), and the server only has 512MB
-// total. A generous byte cap alone isn't enough: a 6MB PDF with a couple of
-// full-res photos can still exceed that. Page count is the real risk factor.
-export const ONBOARDING_DOC_MAX_BYTES = 3 * 1024 * 1024; // 3MB
+// PDF parsing actually runs in an isolated worker process (see
+// pdf-isolated.ts) — a memory-heavy or malformed PDF can only crash that
+// throwaway worker, never the main server. That safety net is what lets
+// these limits be generous rather than a defensive guess; the page-count
+// check below is still worth keeping as a fast, cheap first line of defense.
+export const ONBOARDING_DOC_MAX_BYTES = 8 * 1024 * 1024; // 8MB
 export const ONBOARDING_DOC_ALLOWED_MIME = new Set(["application/pdf", "text/plain"]);
-const PDF_MAX_PAGES = 15;
+const PDF_MAX_PAGES = 40;
 
 export class PdfTooComplexError extends Error {}
 
