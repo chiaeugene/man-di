@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { Package, PackageAttachment } from "@prisma/client";
+import type { Package } from "@prisma/client";
 import { parseJson } from "@/lib/json";
-import { serializeAttachment } from "@/lib/attachments";
+import { serializeAttachment, type AttachmentMetadata } from "@/lib/attachments";
 
 export const PackageInputSchema = z.object({
   name: z.string().min(1).max(120),
@@ -21,7 +21,7 @@ export const PackageInputSchema = z.object({
 export type PackageInput = z.infer<typeof PackageInputSchema>;
 
 // JSON string columns → arrays for the client.
-export function serializePackage(p: Package & { attachments?: PackageAttachment[] }) {
+export function serializePackage(p: Package & { attachments?: AttachmentMetadata[] }) {
   return {
     ...p,
     deliverables: parseJson<string[]>(p.deliverables, []),

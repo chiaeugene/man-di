@@ -40,7 +40,10 @@ export async function generateMandyReply(opts: {
     prisma.package.findMany({
       where: { profileId: profile.id, isActive: true },
       orderBy: { sortOrder: "asc" },
-      include: { attachments: { orderBy: { sortOrder: "asc" } } },
+      // Metadata only — the prompt/guardrail just need ids/labels, never the
+      // bytes. Loading every attachment's file payload on every chat message
+      // was OOM-crashing the server.
+      include: { attachments: { orderBy: { sortOrder: "asc" }, omit: { data: true } } },
     }),
     prisma.trainingExample.findMany({
       where: { profileId: profile.id },

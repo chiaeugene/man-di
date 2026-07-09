@@ -1,4 +1,5 @@
-import type { Package, PackageAttachment, PhotographerProfile, TrainingExample, Lead } from "@prisma/client";
+import type { Package, PhotographerProfile, TrainingExample, Lead } from "@prisma/client";
+import type { AttachmentMetadata } from "@/lib/attachments";
 import { parseJson } from "@/lib/json";
 import {
   BrandBrainSchema,
@@ -16,7 +17,7 @@ function line(label: string, value: string | null | undefined): string {
   return value && value.trim() ? `- ${label}: ${value.trim()}\n` : "";
 }
 
-function renderPackage(p: Package & { attachments?: PackageAttachment[] }): string {
+function renderPackage(p: Package & { attachments?: AttachmentMetadata[] }): string {
   const deliverables = parseJson<string[]>(p.deliverables, []);
   const addOns = parseJson<{ name: string; priceMyr: number }[]>(p.addOns, []);
   let out = `### ${p.name} — RM${p.priceMyr.toLocaleString()}\n`;
@@ -38,7 +39,7 @@ function renderPackage(p: Package & { attachments?: PackageAttachment[] }): stri
 // Compiles the full customer-facing system prompt for one tenant.
 export function buildMandySystemPrompt(opts: {
   profile: PhotographerProfile;
-  packages: (Package & { attachments?: PackageAttachment[] })[];
+  packages: (Package & { attachments?: AttachmentMetadata[] })[];
   trainingExamples: TrainingExample[];
   lead?: Lead | null;
 }): string {
