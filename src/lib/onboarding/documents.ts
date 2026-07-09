@@ -3,8 +3,17 @@ import dns from "node:dns/promises";
 import { isIP } from "node:net";
 import type { OnboardingDocument } from "@prisma/client";
 
-export const ONBOARDING_DOC_MAX_BYTES = 8 * 1024 * 1024; // 8MB
+// Photography price lists/brochures are usually a handful of pages, often
+// with embedded photos — those photos are exactly what makes PDF parsing
+// memory-hungry (the parser still has to load the full page/image structure
+// even though we only want text back out), and the server only has 512MB
+// total. A generous byte cap alone isn't enough: a 6MB PDF with a couple of
+// full-res photos can still exceed that. Page count is the real risk factor.
+export const ONBOARDING_DOC_MAX_BYTES = 3 * 1024 * 1024; // 3MB
 export const ONBOARDING_DOC_ALLOWED_MIME = new Set(["application/pdf", "text/plain"]);
+const PDF_MAX_PAGES = 15;
+
+export class PdfTooComplexError extends Error {}
 
 const URL_FETCH_TIMEOUT_MS = 10_000;
 const URL_FETCH_MAX_BYTES = 2 * 1024 * 1024; // 2MB
@@ -15,7 +24,17 @@ export class UrlFetchError extends Error {}
 export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   const parser = new PDFParse({ data: buffer });
   try {
-    const result = await parser.getText();
+    // getInfo() reads only document metadata (no page rendering) — cheap way
+    // to reject an overly long/complex PDF before the expensive full parse.
+    const info = await parser.getInfo();
+    if (info.total > PDF_MAX_PAGES) {
+      throw new PdfTooComplexError(
+        `That PDF has ${info.total} pages — please keep uploads under ${PDF_MAX_PAGES} pages (a price list or service menu is usually plenty).`
+      );
+    }
+    // Belt-and-braces: even after the page-count check, only ever ask for
+    // pages within the cap.
+    const result = await parser.getText({ first: PDF_MAX_PAGES });
     return result.text.trim();
   } finally {
     await parser.destroy();

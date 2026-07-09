@@ -10,6 +10,7 @@ import {
   truncateExtractedText,
   serializeOnboardingDocument,
   UrlFetchError,
+  PdfTooComplexError,
 } from "@/lib/onboarding/documents";
 
 export async function GET() {
@@ -84,11 +85,16 @@ export async function POST(req: Request) {
     if (!ONBOARDING_DOC_ALLOWED_MIME.has(file.type)) {
       throw new ApiError(400, "Only PDF or plain text files are allowed.");
     }
-    if (file.size > ONBOARDING_DOC_MAX_BYTES) throw new ApiError(400, "File is too large (max 8MB).");
+    if (file.size > ONBOARDING_DOC_MAX_BYTES) throw new ApiError(400, "File is too large (max 3MB).");
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const extractedText =
-      file.type === "application/pdf" ? await extractTextFromPdf(buffer) : buffer.toString("utf-8");
+    let extractedText: string;
+    try {
+      extractedText = file.type === "application/pdf" ? await extractTextFromPdf(buffer) : buffer.toString("utf-8");
+    } catch (err) {
+      if (err instanceof PdfTooComplexError) throw new ApiError(400, err.message);
+      throw err;
+    }
     if (!extractedText.trim()) throw new ApiError(400, "Could not find any readable text in that file.");
 
     const doc = await prisma.onboardingDocument.create({
