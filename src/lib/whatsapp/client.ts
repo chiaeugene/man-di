@@ -1,4 +1,10 @@
 import type { PackageAttachment } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+
+// Defensive ceiling on how many files Mandy can send in one reply. She's
+// prompted to attach sparingly (usually zero or one), but this guarantees a
+// single message can never try to push an unbounded number of large PDFs.
+const MAX_ATTACHMENTS_PER_MESSAGE = 4;
 
 // Outbound Graph API calls. Failures are logged and swallowed, never thrown —
 // a failed send must never break the webhook's required fast 200 response
@@ -89,5 +95,20 @@ export async function sendWhatsAppAttachment(
     }
   } catch (err) {
     console.error("[whatsapp] sendWhatsAppAttachment error", err);
+  }
+}
+
+// Sends a set of package attachments by id, loading each file's bytes ONE AT
+// A TIME (not all at once) so peak memory is a single file — sending several
+// large PDFs in one batch would otherwise reintroduce the load-everything-
+// into-memory pattern that OOM-crashed the server.
+export async function sendWhatsAppAttachmentsByIds(
+  phoneNumberId: string,
+  to: string,
+  attachmentIds: string[]
+): Promise<void> {
+  for (const id of attachmentIds.slice(0, MAX_ATTACHMENTS_PER_MESSAGE)) {
+    const attachment = await prisma.packageAttachment.findUnique({ where: { id } });
+    if (attachment) await sendWhatsAppAttachment(phoneNumberId, to, attachment);
   }
 }

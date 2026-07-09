@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireProfile } from "@/lib/tenant";
 import { handle, ApiError } from "@/lib/api";
 import { generateMandyReply, recordExchange, refreshLeadSummary } from "@/lib/ai/engine";
-import { sendWhatsAppText, sendWhatsAppAttachment } from "@/lib/whatsapp/client";
+import { sendWhatsAppText, sendWhatsAppAttachmentsByIds } from "@/lib/whatsapp/client";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -96,10 +96,7 @@ async function resumePendingReply(
   if (lead.source === "WHATSAPP" && profile.whatsappPhoneId && lead.phone) {
     await sendWhatsAppText(profile.whatsappPhoneId, lead.phone, output.reply);
     if (attachmentIds.length) {
-      const attachments = await prisma.packageAttachment.findMany({ where: { id: { in: attachmentIds } } });
-      for (const attachment of attachments) {
-        await sendWhatsAppAttachment(profile.whatsappPhoneId, lead.phone, attachment);
-      }
+      await sendWhatsAppAttachmentsByIds(profile.whatsappPhoneId, lead.phone, attachmentIds);
     }
   }
   return true;

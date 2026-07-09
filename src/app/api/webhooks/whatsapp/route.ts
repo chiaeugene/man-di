@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyWhatsAppSignature } from "@/lib/whatsapp/verify";
-import { sendWhatsAppText, sendWhatsAppAttachment } from "@/lib/whatsapp/client";
+import { sendWhatsAppText, sendWhatsAppAttachmentsByIds } from "@/lib/whatsapp/client";
 import { handleInboundMessage, recordUnhandledInboundMessage } from "@/lib/webhooks/inbound";
 
 // Meta's one-time webhook verification handshake (configured in the Meta App
@@ -119,12 +119,7 @@ export async function POST(req: Request) {
 
           await sendWhatsAppText(phoneNumberId, message.from, result.reply);
           if (result.attachmentIds.length) {
-            const attachments = await prisma.packageAttachment.findMany({
-              where: { id: { in: result.attachmentIds } },
-            });
-            for (const attachment of attachments) {
-              await sendWhatsAppAttachment(phoneNumberId, message.from, attachment);
-            }
+            await sendWhatsAppAttachmentsByIds(phoneNumberId, message.from, result.attachmentIds);
           }
         } catch (err) {
           console.error("[whatsapp webhook] failed to process message", message.id, err);
