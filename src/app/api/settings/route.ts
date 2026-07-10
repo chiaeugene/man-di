@@ -22,6 +22,9 @@ export async function GET() {
       packageRules: PackageRulesSchema.parse(parseJson(profile.packageRules, {})),
       onboardingStatus: profile.onboardingStatus,
       whatsappPhoneId: profile.whatsappPhoneId,
+      // Connection status only — googleRefreshToken is never returned here.
+      googleCalendarConnected: profile.googleCalendarConnected,
+      googleAccountEmail: profile.googleAccountEmail,
     };
   });
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { IconHeart, IconSparkles, IconWallet, IconChat } from "@/components/Icons";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { IconHeart, IconSparkles, IconWallet, IconChat, IconCalendar, IconAlert, IconCheckCircle } from "@/components/Icons";
 import { useI18n } from "@/lib/i18n/LocaleProvider";
 
 type Brain = Record<string, string>;
@@ -12,6 +12,11 @@ interface SettingsData {
   salesBrain: Brain;
   bookingBrain: Brain;
   whatsappPhoneId: string;
+}
+
+interface GoogleCalendarState {
+  connected: boolean;
+  accountEmail: string | null;
 }
 
 const BRAND_KEYS = [
@@ -67,25 +72,60 @@ const SECTION_META: Record<string, { Icon: typeof IconHeart; color: string }> = 
 };
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsPageInner />
+    </Suspense>
+  );
+}
+
+function SettingsPageInner() {
   const { t } = useI18n();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<SettingsData | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [restarting, setRestarting] = useState(false);
+  const [gcal, setGcal] = useState<GoogleCalendarState | null>(null);
+  const [gcalBusy, setGcalBusy] = useState(false);
+
+  // Lazy initializer reads the URL only on the very first render, capturing
+  // it into real state — if this were derived from searchParams on every
+  // render instead, the banner would vanish the instant the cleanup effect
+  // below strips the query param (a flash instead of a persistent message).
+  const [gcalBanner] = useState<{ type: "connected" } | { type: "error"; message?: string } | null>(() => {
+    const calendar = searchParams.get("calendar");
+    if (calendar === "connected") return { type: "connected" };
+    if (calendar === "error") return { type: "error", message: searchParams.get("message") ?? undefined };
+    return null;
+  });
 
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
-      .then((d) =>
+      .then((d) => {
         setData({
           brandBrain: d.brandBrain ?? {},
           salesBrain: d.salesBrain ?? {},
           bookingBrain: d.bookingBrain ?? {},
           whatsappPhoneId: d.whatsappPhoneId ?? "",
-        })
-      );
+        });
+        setGcal({ connected: Boolean(d.googleCalendarConnected), accountEmail: d.googleAccountEmail ?? null });
+      });
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("calendar")) router.replace("/settings");
+  }, [searchParams, router]);
+
+  async function disconnectGoogleCalendar() {
+    if (!confirm(t("settings.googleCalendarDisconnectConfirm"))) return;
+    setGcalBusy(true);
+    const res = await fetch("/api/google-calendar/disconnect", { method: "POST" });
+    setGcalBusy(false);
+    if (res.ok) setGcal({ connected: false, accountEmail: null });
+  }
 
   async function save() {
     if (!data) return;
@@ -166,6 +206,21 @@ export default function SettingsPage() {
         </button>
       </div>
 
+      {gcalBanner && (
+        <div
+          className={`mb-6 flex items-center gap-2.5 rounded-2xl border px-5 py-3.5 text-sm shadow-petal ${
+            gcalBanner.type === "connected"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {gcalBanner.type === "connected" ? <IconCheckCircle size={16} /> : <IconAlert size={16} />}
+          {gcalBanner.type === "connected"
+            ? t("settings.googleCalendarConnectedBanner")
+            : gcalBanner.message || t("settings.googleCalendarErrorBanner")}
+        </div>
+      )}
+
       <div className="space-y-6">
         {renderSection("brandBrain", BRAND_KEYS)}
         {renderSection("salesBrain", SALES_KEYS)}
@@ -189,6 +244,38 @@ export default function SettingsPage() {
               className="w-full max-w-md rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
             />
           </div>
+        </section>
+
+        <section className="rounded-3xl border border-rose-100 bg-white p-6 shadow-petal">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-rose-500"><IconCalendar size={15} /></span>
+            <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-wine-soft">{t("settings.googleCalendar")}</h2>
+          </div>
+          <p className="mb-5 text-xs text-wine-soft/50">{t("settings.googleCalendarDesc")}</p>
+          {!gcal ? (
+            <p className="text-sm text-wine-soft/50">{t("common.loading")}</p>
+          ) : gcal.connected ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                <IconCheckCircle size={14} />
+                {t("settings.googleCalendarConnectedAs")} {gcal.accountEmail}
+              </span>
+              <button
+                onClick={disconnectGoogleCalendar}
+                disabled={gcalBusy}
+                className="cursor-pointer rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-wine-soft transition-colors duration-150 hover:bg-rose-50 disabled:opacity-50"
+              >
+                {t("settings.googleCalendarDisconnect")}
+              </button>
+            </div>
+          ) : (
+            <a
+              href="/api/google-calendar/connect"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 px-5 py-2.5 text-sm font-semibold text-white shadow-petal transition-all duration-200 hover:shadow-petal-lg hover:brightness-105 active:scale-[0.99]"
+            >
+              <IconCalendar size={15} /> {t("settings.googleCalendarConnect")}
+            </a>
+          )}
         </section>
 
         <section className="rounded-3xl border border-red-200 bg-red-50/40 p-6 shadow-petal">

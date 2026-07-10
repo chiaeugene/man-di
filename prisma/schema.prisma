@@ -48,6 +48,9 @@ model PhotographerProfile {
   // Phase 2/3 stubs
   whatsappPhoneId          String?
   googleCalendarConnected  Boolean @default(false)
+  googleRefreshToken       String? // never returned by any API response
+  googleCalendarId         String? // which calendar to check/write, default "primary"
+  googleAccountEmail       String? // display only, e.g. "Connected as x@gmail.com"
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
