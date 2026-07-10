@@ -2,21 +2,24 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireProfile, UnauthorizedError } from "@/lib/tenant";
 import { exchangeCodeForTokens, fetchGoogleAccountEmail, GoogleOAuthError } from "@/lib/google-calendar/oauth";
+import { getPublicOrigin } from "@/lib/http";
 
 const STATE_COOKIE = "gcal_oauth_state";
 
-function errorRedirect(req: Request, message: string) {
-  const res = NextResponse.redirect(new URL(`/settings?calendar=error&message=${encodeURIComponent(message)}`, req.url));
+function errorRedirect(origin: string, message: string) {
+  const res = NextResponse.redirect(`${origin}/settings?calendar=error&message=${encodeURIComponent(message)}`);
   res.cookies.delete(STATE_COOKIE);
   return res;
 }
 
 export async function GET(req: Request) {
+  const origin = getPublicOrigin(req);
+
   let profile;
   try {
     profile = await requireProfile();
   } catch (err) {
-    if (err instanceof UnauthorizedError) return NextResponse.redirect(new URL("/login", req.url));
+    if (err instanceof UnauthorizedError) return NextResponse.redirect(`${origin}/login`);
     throw err;
   }
 
@@ -27,7 +30,7 @@ export async function GET(req: Request) {
 
   if (error) {
     // e.g. the photographer clicked "Cancel" on Google's consent screen.
-    return errorRedirect(req, "Google Calendar connection was cancelled.");
+    return errorRedirect(origin, "Google Calendar connection was cancelled.");
   }
 
   const cookieStore = req.headers.get("cookie") ?? "";
@@ -43,16 +46,18 @@ export async function GET(req: Request) {
       hasState: Boolean(state),
       hasExpected: Boolean(expectedState),
     });
-    return errorRedirect(req, "That connection link expired or was invalid. Please try connecting again.");
+    return errorRedirect(origin, "That connection link expired or was invalid. Please try connecting again.");
   }
 
   try {
-    const redirectUri = new URL("/api/google-calendar/callback", req.url).toString();
+    // Must exactly match the redirect_uri used in /connect — Google validates
+    // the two match on token exchange.
+    const redirectUri = `${origin}/api/google-calendar/callback`;
     const tokens = await exchangeCodeForTokens(code, redirectUri);
     if (!tokens.refreshToken) {
       // Shouldn't happen with access_type=offline&prompt=consent, but if
       // Google ever omits it, we can't maintain access after this session.
-      return errorRedirect(req, "Google didn't grant lasting access. Please try connecting again.");
+      return errorRedirect(origin, "Google didn't grant lasting access. Please try connecting again.");
     }
 
     const email = await fetchGoogleAccountEmail(tokens.accessToken);
@@ -67,12 +72,12 @@ export async function GET(req: Request) {
       },
     });
 
-    const res = NextResponse.redirect(new URL("/settings?calendar=connected", req.url));
+    const res = NextResponse.redirect(`${origin}/settings?calendar=connected`);
     res.cookies.delete(STATE_COOKIE);
     return res;
   } catch (err) {
-    if (err instanceof GoogleOAuthError) return errorRedirect(req, err.message);
+    if (err instanceof GoogleOAuthError) return errorRedirect(origin, err.message);
     console.error("[google-calendar/callback]", err);
-    return errorRedirect(req, "Something went wrong connecting Google Calendar.");
+    return errorRedirect(origin, "Something went wrong connecting Google Calendar.");
   }
 }

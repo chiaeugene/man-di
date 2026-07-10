@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { requireProfile, UnauthorizedError } from "@/lib/tenant";
 import { getGoogleAuthUrl, GoogleOAuthError } from "@/lib/google-calendar/oauth";
+import { getPublicOrigin } from "@/lib/http";
 
 const STATE_COOKIE = "gcal_oauth_state";
 
@@ -9,11 +10,12 @@ const STATE_COOKIE = "gcal_oauth_state";
 // directly. Generates a CSRF nonce, stores it in a short-lived httpOnly
 // cookie, and sends the photographer to Google's consent screen.
 export async function GET(req: Request) {
+  const origin = getPublicOrigin(req);
   try {
     await requireProfile();
 
     const state = crypto.randomBytes(24).toString("hex");
-    const redirectUri = new URL("/api/google-calendar/callback", req.url).toString();
+    const redirectUri = `${origin}/api/google-calendar/callback`;
     const authUrl = getGoogleAuthUrl(redirectUri, state);
 
     const res = NextResponse.redirect(authUrl);
@@ -27,12 +29,12 @@ export async function GET(req: Request) {
     return res;
   } catch (err) {
     if (err instanceof UnauthorizedError) {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return NextResponse.redirect(`${origin}/login`);
     }
     if (err instanceof GoogleOAuthError) {
-      return NextResponse.redirect(new URL(`/settings?calendar=error&message=${encodeURIComponent(err.message)}`, req.url));
+      return NextResponse.redirect(`${origin}/settings?calendar=error&message=${encodeURIComponent(err.message)}`);
     }
     console.error("[google-calendar/connect]", err);
-    return NextResponse.redirect(new URL("/settings?calendar=error", req.url));
+    return NextResponse.redirect(`${origin}/settings?calendar=error`);
   }
 }
