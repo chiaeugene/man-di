@@ -19,8 +19,10 @@ export async function checkGoogleCalendarBusy(
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        timeMin: `${isoDate}T00:00:00`,
-        timeMax: `${isoDate}T23:59:59`,
+        // RFC3339 requires an explicit UTC offset — Google rejects
+        // offset-less timestamps with a 400. +08:00 = Malaysia.
+        timeMin: `${isoDate}T00:00:00+08:00`,
+        timeMax: `${isoDate}T23:59:59+08:00`,
         timeZone: "Asia/Kuala_Lumpur",
         items: [{ id: calendarId }],
       }),
