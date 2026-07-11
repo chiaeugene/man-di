@@ -80,6 +80,8 @@ const ms: typeof en = {
     whatsapp: "WhatsApp",
     dateTbc: "tarikh belum ditetapkan",
     locationTbc: "lokasi belum ditetapkan",
+    calendarSynced: "Disegerakkan",
+    fromGoogleCalendar: "Daripada Google Kalendar",
   },
   leads: {
     eyebrow: "Aliran jualan anda",
@@ -196,6 +198,9 @@ const ms: typeof en = {
     googleCalendarDisconnectConfirm: "Putuskan sambungan Google Kalendar? Mandy akan berhenti mempunyai akses kepadanya.",
     googleCalendarConnectedBanner: "Google Kalendar disambungkan! 🎉",
     googleCalendarErrorBanner: "Tidak dapat menyambungkan Google Kalendar. Sila cuba lagi.",
+    maxBookingsPerDay: "Kapasiti tempahan",
+    maxBookingsPerDayDesc: "Bilangan majlis perkahwinan maksimum yang boleh anda tangani pada hari yang sama. Mandy akan menandakan tarikh itu penuh sebaik sahaja tempahan mencapai jumlah ini, bukannya menerima tempahan lain. Biarkan kosong jika tiada had.",
+    maxBookingsPerDayHint: "Belum ditetapkan — Mandy tiada had buat masa ini dan tidak akan menandakan mana-mana tarikh sebagai penuh. Kebanyakan jurugambar solo menetapkan nilai ini kepada 1.",
     dangerZone: "Zon berbahaya",
     restartInterview: "Mulakan semula sesi temu bual",
     restartInterviewDesc: "Memadam jawapan temu bual anda dan bermula semula dari soalan 1. Pakej dan perubahan manual lain akan dikekalkan.",
@@ -232,6 +237,7 @@ const ms: typeof en = {
       availabilityRules: "Peraturan ketersediaan",
       humanOnlyTopics: "Sentiasa serahkan kepada manusia untuk",
       whatsappPhoneId: "ID Nombor Telefon WhatsApp",
+      maxBookingsPerDay: "Maksimum majlis perkahwinan sehari",
     },
     placeholders: {
       photographerName: "cth. Aiman Rashid",
@@ -264,6 +270,7 @@ const ms: typeof en = {
       availabilityRules: "cth. Sentiasa semak dengan saya dahulu; musim Tahun Baru Cina sentiasa penuh",
       humanOnlyTopics: "cth. Perkahwinan pelbagai hari/luar negara tersuai, bayaran balik, permintaan media",
       whatsappPhoneId: "cth. 109876543210123 (daripada papan pemuka API WhatsApp Meta)",
+      maxBookingsPerDay: "cth. 1",
     },
   },
   training: {
@@ -341,6 +348,12 @@ const ms: typeof en = {
     Booked: "Ditempah",
     Lost: "Hilang",
     "Human Takeover Needed": "Perlu Pengambilalihan Manusia",
+  },
+  notFound: {
+    eyebrow: "Halaman tidak dijumpai",
+    title: "Halaman ini telah hilang",
+    subtitle: "Halaman yang anda cari tidak wujud atau mungkin telah dipindahkan.",
+    backLink: "Kembali ke dashboard",
   },
 };
 

@@ -80,6 +80,8 @@ const zh: typeof en = {
     whatsapp: "WhatsApp",
     dateTbc: "日期待定",
     locationTbc: "地点待定",
+    calendarSynced: "已同步",
+    fromGoogleCalendar: "来自 Google 日历",
   },
   leads: {
     eyebrow: "您的销售流程",
@@ -196,6 +198,9 @@ const zh: typeof en = {
     googleCalendarDisconnectConfirm: "确定要断开 Google 日历连接吗？Mandy 将不再能够访问它。",
     googleCalendarConnectedBanner: "Google 日历已连接！🎉",
     googleCalendarErrorBanner: "无法连接 Google 日历，请再试一次。",
+    maxBookingsPerDay: "预订容量",
+    maxBookingsPerDayDesc: "你一天最多能拍摄几场婚礼。一旦某天确认的预订数达到这个数字，Mandy 会提示该日期已满，而不会再接受新预订。留空表示不限制。",
+    maxBookingsPerDayHint: "尚未设置 — Mandy 目前没有上限，永远不会提示某天已满档。大多数个人摄影师会设置为 1。",
     dangerZone: "危险操作区",
     restartInterview: "重新开始设置访谈",
     restartInterviewDesc: "清除您的访谈答案，从第一题重新开始。您的套餐及其他手动修改内容将会保留。",
@@ -232,6 +237,7 @@ const zh: typeof en = {
       availabilityRules: "档期规则",
       humanOnlyTopics: "必须交由真人处理的情况",
       whatsappPhoneId: "WhatsApp 电话号码 ID",
+      maxBookingsPerDay: "每日最多婚礼场数",
     },
     placeholders: {
       photographerName: "例如：陈伟乐",
@@ -264,6 +270,7 @@ const zh: typeof en = {
       availabilityRules: "例如：一定要先跟我确认；农历新年档期一律客满",
       humanOnlyTopics: "例如：多日/海外婚礼定制、退款、媒体邀约",
       whatsappPhoneId: "例如：109876543210123（来自 Meta 的 WhatsApp API 后台）",
+      maxBookingsPerDay: "例如：1",
     },
   },
   training: {
@@ -341,6 +348,12 @@ const zh: typeof en = {
     Booked: "已预订",
     Lost: "已流失",
     "Human Takeover Needed": "需人工处理",
+  },
+  notFound: {
+    eyebrow: "找不到页面",
+    title: "这个页面走丢了",
+    subtitle: "您要找的页面不存在或已被移动。",
+    backLink: "返回仪表板",
   },
 };
 

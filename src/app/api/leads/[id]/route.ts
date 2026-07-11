@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireProfile } from "@/lib/tenant";
 import { handle, ApiError } from "@/lib/api";
 import { LEAD_STATUSES, DEPOSIT_STATUSES } from "@/lib/constants";
+import { syncGoogleCalendarOnLeadUpdate } from "@/lib/google-calendar/sync";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -59,6 +60,8 @@ export async function PATCH(req: Request, { params }: Params) {
     if (body.data.depositStatus === "CONFIRMED" && !body.data.status) {
       data.status = "Booked";
     }
+
+    await syncGoogleCalendarOnLeadUpdate(profile, lead, data);
 
     const updated = await prisma.lead.update({ where: { id }, data });
     return { lead: updated };

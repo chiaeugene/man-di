@@ -51,6 +51,7 @@ model PhotographerProfile {
   googleRefreshToken       String? // never returned by any API response
   googleCalendarId         String? // which calendar to check/write, default "primary"
   googleAccountEmail       String? // display only, e.g. "Connected as x@gmail.com"
+  maxBookingsPerDay        Int?    // photographer's same-day capacity cap; null = not enforced
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -165,6 +166,7 @@ model Lead {
   status         String  @default("New Lead")
   depositStatus  String  @default("NONE") // NONE | INSTRUCTIONS_SENT | PENDING_CONFIRMATION | CONFIRMED
   calendarStatus String  @default("NONE") // NONE | CREATED
+  googleEventId  String? // the created Google Calendar event's id, for later update/delete
 
   summary        String?
   nextAction     String?

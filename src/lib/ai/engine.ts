@@ -5,6 +5,8 @@ import { chatComplete, extractJson, llmConfigured, type ChatMessage } from "@/li
 import { buildMandySystemPrompt } from "@/lib/ai/prompts";
 import { EngineOutputSchema, type EngineOutput } from "@/lib/ai/schemas";
 import { AI_ALLOWED_STATUSES, type LeadStatus } from "@/lib/constants";
+import { parseEventDateToIso } from "@/lib/google-calendar/events";
+import { resolveDateAvailability, type DateAvailability } from "@/lib/google-calendar/availability";
 
 const HISTORY_LIMIT = 40;
 
@@ -59,7 +61,23 @@ export async function generateMandyReply(opts: {
     }),
   ]);
 
-  const system = buildMandySystemPrompt({ profile, packages, trainingExamples, lead });
+  let availability: DateAvailability | null = null;
+  const isoDate = parseEventDateToIso(lead.eventDate);
+  if (isoDate) {
+    try {
+      const bookedLeads = await prisma.lead.findMany({
+        where: { profileId: profile.id, status: "Booked", NOT: { id: lead.id } },
+        select: { eventDate: true },
+      });
+      const internalBookedCount = bookedLeads.filter((l) => parseEventDateToIso(l.eventDate) === isoDate).length;
+      availability = await resolveDateAvailability(profile, isoDate, internalBookedCount);
+    } catch (err) {
+      // Best-effort — a broken calendar check must never break the reply.
+      console.error("[availability] failed to resolve (non-fatal)", err);
+    }
+  }
+
+  const system = buildMandySystemPrompt({ profile, packages, trainingExamples, lead, availability });
 
   const messages: ChatMessage[] = [];
   for (const m of history) {

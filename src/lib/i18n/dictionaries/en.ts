@@ -81,6 +81,8 @@ const en = {
     whatsapp: "WhatsApp",
     dateTbc: "date TBC",
     locationTbc: "location TBC",
+    calendarSynced: "Synced",
+    fromGoogleCalendar: "From Google Calendar",
   },
   leads: {
     eyebrow: "Your pipeline",
@@ -197,6 +199,9 @@ const en = {
     googleCalendarDisconnectConfirm: "Disconnect Google Calendar? Mandy will stop having access to it.",
     googleCalendarConnectedBanner: "Google Calendar connected! 🎉",
     googleCalendarErrorBanner: "Could not connect Google Calendar. Please try again.",
+    maxBookingsPerDay: "Booking capacity",
+    maxBookingsPerDayDesc: "The most weddings you can shoot on the same day. Mandy will flag a date as full once this many bookings are confirmed for it, instead of accepting another. Leave blank for no limit.",
+    maxBookingsPerDayHint: "Not set — Mandy currently has no cap and will never flag a date as fully booked. Most solo photographers set this to 1.",
     dangerZone: "Danger zone",
     restartInterview: "Restart setup interview",
     restartInterviewDesc: "Wipes your interview answers and starts fresh from question 1. Your packages and any manual edits here are kept.",
@@ -233,6 +238,7 @@ const en = {
       availabilityRules: "Availability rules",
       humanOnlyTopics: "Always hand to human for",
       whatsappPhoneId: "WhatsApp Phone Number ID",
+      maxBookingsPerDay: "Max weddings per day",
     },
     placeholders: {
       photographerName: "e.g. Aiman Rashid",
@@ -265,6 +271,7 @@ const en = {
       availabilityRules: "e.g. Always check with me first; CNY period is always fully booked",
       humanOnlyTopics: "e.g. Custom multi-day/overseas weddings, refunds, press requests",
       whatsappPhoneId: "e.g. 109876543210123 (from Meta's WhatsApp API dashboard)",
+      maxBookingsPerDay: "e.g. 1",
     },
   },
   training: {
@@ -342,6 +349,12 @@ const en = {
     Booked: "Booked",
     Lost: "Lost",
     "Human Takeover Needed": "Human Takeover Needed",
+  },
+  notFound: {
+    eyebrow: "Page not found",
+    title: "This page wandered off",
+    subtitle: "The page you're looking for doesn't exist or may have moved.",
+    backLink: "Back to dashboard",
   },
 };
 

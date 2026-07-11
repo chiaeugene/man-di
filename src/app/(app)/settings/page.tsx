@@ -12,6 +12,7 @@ interface SettingsData {
   salesBrain: Brain;
   bookingBrain: Brain;
   whatsappPhoneId: string;
+  maxBookingsPerDay: number | null;
 }
 
 interface GoogleCalendarState {
@@ -110,6 +111,7 @@ function SettingsPageInner() {
           salesBrain: d.salesBrain ?? {},
           bookingBrain: d.bookingBrain ?? {},
           whatsappPhoneId: d.whatsappPhoneId ?? "",
+          maxBookingsPerDay: d.maxBookingsPerDay ?? null,
         });
         setGcal({ connected: Boolean(d.googleCalendarConnected), accountEmail: d.googleAccountEmail ?? null });
       });
@@ -276,6 +278,36 @@ function SettingsPageInner() {
               <IconCalendar size={15} /> {t("settings.googleCalendarConnect")}
             </a>
           )}
+        </section>
+
+        <section className="rounded-3xl border border-rose-100 bg-white p-6 shadow-petal">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-gold"><IconCalendar size={15} /></span>
+            <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-wine-soft">{t("settings.maxBookingsPerDay")}</h2>
+          </div>
+          <p className="mb-5 text-xs text-wine-soft/50">{t("settings.maxBookingsPerDayDesc")}</p>
+          <div>
+            <label htmlFor="maxBookingsPerDay" className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
+              {t("settings.fields.maxBookingsPerDay")}
+            </label>
+            <input
+              id="maxBookingsPerDay"
+              type="number"
+              min={1}
+              value={data.maxBookingsPerDay ?? ""}
+              onChange={(e) =>
+                setData({ ...data, maxBookingsPerDay: e.target.value === "" ? null : Number(e.target.value) })
+              }
+              placeholder={t("settings.placeholders.maxBookingsPerDay")}
+              className="w-full max-w-[10rem] rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+            />
+            {data.maxBookingsPerDay == null && (
+              <p className="mt-2 flex items-start gap-1.5 text-xs font-medium text-amber-600">
+                <IconAlert size={13} className="mt-0.5 shrink-0" />
+                {t("settings.maxBookingsPerDayHint")}
+              </p>
+            )}
+          </div>
         </section>
 
         <section className="rounded-3xl border border-red-200 bg-red-50/40 p-6 shadow-petal">

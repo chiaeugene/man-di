@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { LEAD_SOURCES } from "@/lib/constants";
 import { getServerT } from "@/lib/i18n/server";
+import { listUpcomingCalendarEvents } from "@/lib/google-calendar/events";
 import {
   IconAlert,
   IconArrowRight,
@@ -43,6 +44,26 @@ export default async function DashboardPage() {
   const bookedLeads = leads.filter((l) => l.status === "Booked");
   const setupIncomplete = profile.onboardingStatus !== "COMPLETED";
   const firstName = (profile.photographerName || "").split(" ")[0];
+
+  // "Upcoming Weddings" reflects the real connected Google Calendar (source of
+  // truth) rather than only Mandy's own booked leads — a photographer may add
+  // events directly in Google Calendar too. `null` means the calendar
+  // couldn't be checked at all (not connected, or a transient API error) —
+  // falls back to the internal booked-leads list in that case, so the
+  // section is never blank just because a single live read failed.
+  const liveCalendarEvents = profile.googleCalendarConnected
+    ? await listUpcomingCalendarEvents(profile, 10)
+    : null;
+  const calendarEvents = liveCalendarEvents ?? [];
+  const usingLiveCalendar = liveCalendarEvents !== null;
+  const eventIds = calendarEvents.map((e) => e.id);
+  const leadsByEventId = eventIds.length
+    ? new Map(
+        (
+          await prisma.lead.findMany({ where: { profileId: profile.id, googleEventId: { in: eventIds } } })
+        ).map((l) => [l.googleEventId as string, l])
+      )
+    : new Map<string, (typeof leads)[number]>();
 
   const cards = [
     { label: t("dashboard.totalLeads"), value: leads.length, href: "/leads", Icon: IconUsers, tint: "from-rose-100 to-pink-50 text-rose-600" },
@@ -172,7 +193,59 @@ export default async function DashboardPage() {
               {t("dashboard.upcomingWeddings")}
             </h2>
           </div>
-          {bookedLeads.length === 0 ? (
+          {usingLiveCalendar ? (
+            calendarEvents.length === 0 ? (
+              <p className="rounded-2xl bg-rose-50/60 p-5 text-center text-sm text-wine-soft/60">
+                {t("dashboard.noBookings")}
+              </p>
+            ) : (
+              <ul className="divide-y divide-rose-50">
+                {calendarEvents.map((ev) => {
+                  const lead = leadsByEventId.get(ev.id);
+                  const Row = (
+                    <>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-600">
+                        <IconRings size={18} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-wine">
+                          {lead?.customerName || ev.summary}
+                        </p>
+                        <p className="truncate text-xs text-wine-soft/60">
+                          {ev.isoDate} · {ev.location || lead?.location || t("dashboard.locationTbc")}
+                        </p>
+                      </div>
+                      {lead ? (
+                        lead.depositStatus === "CONFIRMED" ? (
+                          <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-600">
+                            <IconCheckCircle size={13} /> {t("dashboard.depositConfirmed")}
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-xs font-medium text-amber-600">{t("dashboard.depositPending")}</span>
+                        )
+                      ) : (
+                        <span className="shrink-0 text-[11px] font-medium text-wine-soft/40">{t("dashboard.fromGoogleCalendar")}</span>
+                      )}
+                    </>
+                  );
+                  return (
+                    <li key={ev.id}>
+                      {lead ? (
+                        <Link
+                          href={`/leads/${lead.id}`}
+                          className="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-2 py-3 transition-colors duration-150 hover:bg-rose-50/50"
+                        >
+                          {Row}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center justify-between gap-3 rounded-xl px-2 py-3">{Row}</div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )
+          ) : bookedLeads.length === 0 ? (
             <p className="rounded-2xl bg-rose-50/60 p-5 text-center text-sm text-wine-soft/60">
               {t("dashboard.noBookings")}
             </p>
@@ -195,13 +268,15 @@ export default async function DashboardPage() {
                         {l.eventDate || t("dashboard.dateTbc")} · {l.location || t("dashboard.locationTbc")}
                       </p>
                     </div>
-                    {l.depositStatus === "CONFIRMED" ? (
-                      <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                        <IconCheckCircle size={13} /> {t("dashboard.depositConfirmed")}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-medium text-amber-600">{t("dashboard.depositPending")}</span>
-                    )}
+                    <div className="flex flex-col items-end gap-1">
+                      {l.depositStatus === "CONFIRMED" ? (
+                        <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                          <IconCheckCircle size={13} /> {t("dashboard.depositConfirmed")}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium text-amber-600">{t("dashboard.depositPending")}</span>
+                      )}
+                    </div>
                   </Link>
                 </li>
               ))}
