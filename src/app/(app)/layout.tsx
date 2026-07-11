@@ -65,7 +65,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </form>
         </div>
       </aside>
-      <main className="ml-60 min-w-0 flex-1 p-8 lg:p-10">{children}</main>
+      <main id="main-content" className="ml-60 min-w-0 flex-1 p-8 lg:p-10">{children}</main>
     </div>
   );
 }

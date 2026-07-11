@@ -305,7 +305,7 @@ export default function PackagesPage() {
               <div className="relative flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-bold text-wine">{p.name}</h3>
-                  <p className="mt-0.5 text-2xl font-bold tracking-tight text-rose-600">
+                  <p className="mt-0.5 text-2xl font-bold tracking-tight text-rose-600 tabular-nums">
                     <span className="text-sm font-semibold text-gold">RM</span>
                     {p.priceMyr.toLocaleString()}
                   </p>
