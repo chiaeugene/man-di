@@ -181,7 +181,13 @@ async function verifyAndMaybeConfirm(
     if (!verification || !isConfidentPaymentMatch(verification)) return null;
 
     const updatedLead = await confirmDepositAndBook(profile, lead);
-    const ackReply = `Payment verified! ✅ RM${verification.extractedAmount} confirmed — your booking is secured 🎉`;
+    // If the date isn't locked yet (payment arrived before the date was
+    // discussed), keep the conversation moving toward it — the calendar
+    // event auto-creates the moment the date lands (see applyEngineEffects).
+    const dateFollowUp = !lead.eventDate
+      ? " Which date would you like to book? I'll lock it in right away 😊"
+      : "";
+    const ackReply = `Payment verified! ✅ RM${verification.extractedAmount} confirmed — your booking is secured 🎉${dateFollowUp}`;
 
     await prisma.message.create({
       data: {

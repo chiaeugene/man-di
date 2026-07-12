@@ -7,6 +7,7 @@ import { EngineOutputSchema, type EngineOutput } from "@/lib/ai/schemas";
 import { AI_ALLOWED_STATUSES, type LeadStatus } from "@/lib/constants";
 import { parseEventDateToIso } from "@/lib/google-calendar/events";
 import { resolveDateAvailability, type DateAvailability } from "@/lib/google-calendar/availability";
+import { syncGoogleCalendarOnLeadUpdate } from "@/lib/google-calendar/sync";
 
 const HISTORY_LIMIT = 40;
 
@@ -67,10 +68,12 @@ export async function generateMandyReply(opts: {
     try {
       const bookedLeads = await prisma.lead.findMany({
         where: { profileId: profile.id, status: "Booked", NOT: { id: lead.id } },
-        select: { eventDate: true },
+        select: { eventDate: true, eventTime: true },
       });
-      const internalBookedCount = bookedLeads.filter((l) => parseEventDateToIso(l.eventDate) === isoDate).length;
-      availability = await resolveDateAvailability(profile, isoDate, internalBookedCount);
+      const sameDayBookings = bookedLeads
+        .filter((l) => parseEventDateToIso(l.eventDate) === isoDate)
+        .map((l) => ({ time: l.eventTime }));
+      availability = await resolveDateAvailability(profile, isoDate, sameDayBookings, lead.eventTime);
     } catch (err) {
       // Best-effort — a broken calendar check must never break the reply.
       console.error("[availability] failed to resolve (non-fatal)", err);
@@ -140,18 +143,26 @@ export async function generateMandyReply(opts: {
   const validAttachmentIds = new Set(packages.flatMap((p) => p.attachments.map((a) => a.id)));
   const attachmentIds = output.sendAttachmentIds.filter((id) => validAttachmentIds.has(id));
 
-  const updatedLead = await applyEngineEffects(lead, output);
+  const updatedLead = await applyEngineEffects(profile, lead, output);
   return { reply: output.reply, output, lead: updatedLead, attachmentIds };
 }
 
+const MONEY_STATES: LeadStatus[] = ["Deposit Paid", "Booked"];
+
 // Server-side guardrail layer: the model only *suggests*; we decide what applies.
-async function applyEngineEffects(lead: Lead, output: EngineOutput): Promise<Lead> {
+// Exported for behavioral tests — production callers go through generateMandyReply.
+export async function applyEngineEffects(
+  profile: PhotographerProfile,
+  lead: Lead,
+  output: EngineOutput
+): Promise<Lead> {
   const data: Record<string, unknown> = {};
   const ex = output.extracted ?? {};
 
   // Fill lead facts (only overwrite blanks — the photographer's manual edits win).
   if (ex.customerName && !lead.customerName) data.customerName = ex.customerName;
   if (ex.eventDate && !lead.eventDate) data.eventDate = ex.eventDate;
+  if (ex.eventTime && !lead.eventTime) data.eventTime = ex.eventTime;
   if (ex.location && !lead.location) data.location = ex.location;
   if (ex.eventType && !lead.eventType) data.eventType = ex.eventType;
   if (ex.budgetRange && !lead.budgetRange) data.budgetRange = ex.budgetRange;
@@ -160,24 +171,39 @@ async function applyEngineEffects(lead: Lead, output: EngineOutput): Promise<Lea
   const suggested = output.suggestedStatus as LeadStatus | null | undefined;
   const lowConfidence = output.confidence < 0.4;
   const takeover = output.takeover?.needed || lowConfidence;
+  const inMoneyState = MONEY_STATES.includes(lead.status as LeadStatus);
 
   if (takeover) {
     data.needsHuman = true;
     data.takeoverReason =
       output.takeover?.reason || (lowConfidence ? "Mandy was not confident about this reply." : null);
-    data.status = "Human Takeover Needed";
+    // A booked/paid customer needing human attention keeps their money
+    // status — needsHuman flags the photographer without demoting the lead
+    // back out of a confirmed state (that demotion silently un-booked a
+    // real paid booking once).
+    if (!inMoneyState) data.status = "Human Takeover Needed";
   } else if (
     suggested &&
     suggested !== lead.status &&
     AI_ALLOWED_STATUSES.includes(suggested) &&
     // Never let the AI move a lead backwards out of a money-adjacent state.
-    lead.status !== "Deposit Paid" &&
-    lead.status !== "Booked"
+    !inMoneyState
   ) {
     data.status = suggested;
   }
 
   if (Object.keys(data).length === 0) return lead;
+
+  // A booked lead gaining calendar-relevant facts (typically the event date
+  // arriving after payment) must reach the calendar — the booking-time sync
+  // was skipped if the date wasn't known yet. Best-effort, same as always.
+  const calendarRelevant = ["eventDate", "eventTime", "location", "eventType", "customerName"].some(
+    (key) => key in data
+  );
+  if (lead.status === "Booked" && calendarRelevant) {
+    await syncGoogleCalendarOnLeadUpdate(profile, lead, data);
+  }
+
   return prisma.lead.update({ where: { id: lead.id }, data });
 }
 

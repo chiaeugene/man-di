@@ -14,6 +14,9 @@ interface SettingsData {
   whatsappPhoneId: string;
   maxBookingsPerDay: number | null;
   autoConfirmPayments: boolean;
+  sessionDurationMinutes: number | null;
+  workingHoursStart: string | null;
+  workingHoursEnd: string | null;
 }
 
 interface GoogleCalendarState {
@@ -114,6 +117,9 @@ function SettingsPageInner() {
           whatsappPhoneId: d.whatsappPhoneId ?? "",
           maxBookingsPerDay: d.maxBookingsPerDay ?? null,
           autoConfirmPayments: Boolean(d.autoConfirmPayments),
+          sessionDurationMinutes: d.sessionDurationMinutes ?? null,
+          workingHoursStart: d.workingHoursStart ?? null,
+          workingHoursEnd: d.workingHoursEnd ?? null,
         });
         setGcal({ connected: Boolean(d.googleCalendarConnected), accountEmail: d.googleAccountEmail ?? null });
       });
@@ -288,27 +294,71 @@ function SettingsPageInner() {
             <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-wine-soft">{t("settings.maxBookingsPerDay")}</h2>
           </div>
           <p className="mb-5 text-xs text-wine-soft/50">{t("settings.maxBookingsPerDayDesc")}</p>
-          <div>
-            <label htmlFor="maxBookingsPerDay" className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
-              {t("settings.fields.maxBookingsPerDay")}
-            </label>
-            <input
-              id="maxBookingsPerDay"
-              type="number"
-              min={1}
-              value={data.maxBookingsPerDay ?? ""}
-              onChange={(e) =>
-                setData({ ...data, maxBookingsPerDay: e.target.value === "" ? null : Number(e.target.value) })
-              }
-              placeholder={t("settings.placeholders.maxBookingsPerDay")}
-              className="w-full max-w-[10rem] rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
-            />
-            {data.maxBookingsPerDay == null && (
-              <p className="mt-2 flex items-start gap-1.5 text-xs font-medium text-amber-600">
-                <IconAlert size={13} className="mt-0.5 shrink-0" />
-                {t("settings.maxBookingsPerDayHint")}
-              </p>
-            )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="maxBookingsPerDay" className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
+                {t("settings.fields.maxBookingsPerDay")}
+              </label>
+              <input
+                id="maxBookingsPerDay"
+                type="number"
+                min={1}
+                value={data.maxBookingsPerDay ?? ""}
+                onChange={(e) =>
+                  setData({ ...data, maxBookingsPerDay: e.target.value === "" ? null : Number(e.target.value) })
+                }
+                placeholder={t("settings.placeholders.maxBookingsPerDay")}
+                className="w-full max-w-[10rem] rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+              />
+              {data.maxBookingsPerDay == null && (
+                <p className="mt-2 flex items-start gap-1.5 text-xs font-medium text-amber-600">
+                  <IconAlert size={13} className="mt-0.5 shrink-0" />
+                  {t("settings.maxBookingsPerDayHint")}
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="sessionDurationMinutes" className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
+                {t("settings.fields.sessionDurationMinutes")}
+              </label>
+              <input
+                id="sessionDurationMinutes"
+                type="number"
+                min={15}
+                step={15}
+                value={data.sessionDurationMinutes ?? ""}
+                onChange={(e) =>
+                  setData({ ...data, sessionDurationMinutes: e.target.value === "" ? null : Number(e.target.value) })
+                }
+                placeholder={t("settings.placeholders.sessionDurationMinutes")}
+                className="w-full max-w-[10rem] rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+              />
+              <p className="mt-2 text-xs text-wine-soft/50">{t("settings.sessionDurationHint")}</p>
+            </div>
+            <div>
+              <label htmlFor="workingHoursStart" className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
+                {t("settings.fields.workingHoursStart")}
+              </label>
+              <input
+                id="workingHoursStart"
+                type="time"
+                value={data.workingHoursStart ?? ""}
+                onChange={(e) => setData({ ...data, workingHoursStart: e.target.value || null })}
+                className="w-full max-w-[10rem] rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="workingHoursEnd" className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
+                {t("settings.fields.workingHoursEnd")}
+              </label>
+              <input
+                id="workingHoursEnd"
+                type="time"
+                value={data.workingHoursEnd ?? ""}
+                onChange={(e) => setData({ ...data, workingHoursEnd: e.target.value || null })}
+                className="w-full max-w-[10rem] rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+              />
+            </div>
           </div>
         </section>
 

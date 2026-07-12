@@ -55,11 +55,23 @@ async function callCalendarApi(
 
 export type BookingEventDetails = {
   isoDate: string;
+  startTime: string | null; // "HH:MM" 24h; null = all-day event
+  durationMinutes: number | null; // session length; null = all-day event
   customerName: string | null;
   eventType: string | null;
   location: string | null;
   budgetRange: string | null;
 };
+
+// "HH:MM" + duration → RFC3339 dateTime pair with the Malaysia offset
+// (Google rejects offset-less timestamps — same lesson as the freeBusy fix).
+function timedRange(isoDate: string, startTime: string, durationMinutes: number) {
+  const start = new Date(`${isoDate}T${startTime}:00+08:00`);
+  const end = new Date(start.getTime() + durationMinutes * 60000);
+  const fmt = (d: Date) =>
+    new Date(d.getTime() + 8 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+08:00");
+  return { start: fmt(start), end: fmt(end) };
+}
 
 function buildEventBody(details: BookingEventDetails) {
   const summary = `${details.customerName || "Wedding"} — ${details.eventType || "Wedding"}`;
@@ -68,12 +80,17 @@ function buildEventBody(details: BookingEventDetails) {
     "Booked via Mandy",
   ].filter(Boolean);
 
+  const timed =
+    details.startTime && details.durationMinutes != null && /^([01]?\d|2[0-3]):[0-5]\d$/.test(details.startTime)
+      ? timedRange(details.isoDate, details.startTime, details.durationMinutes)
+      : null;
+
   return {
     summary,
     description: descriptionLines.join("\n"),
     location: details.location || undefined,
-    start: { date: details.isoDate },
-    end: { date: nextIsoDate(details.isoDate) },
+    start: timed ? { dateTime: timed.start, timeZone: "Asia/Kuala_Lumpur" } : { date: details.isoDate },
+    end: timed ? { dateTime: timed.end, timeZone: "Asia/Kuala_Lumpur" } : { date: nextIsoDate(details.isoDate) },
   };
 }
 

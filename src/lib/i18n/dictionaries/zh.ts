@@ -204,6 +204,7 @@ const zh: typeof en = {
     autoConfirmPayments: "自动确认付款（有风险）",
     autoConfirmPaymentsDesc: "开启后，Mandy 会用 AI 核对顾客的付款截图与你的银行资料。如果匹配度高且清晰，她会自动确认订金、标记预订并创建日历事件 — 无需你审核。如果有任何不确定、不匹配或不清楚的地方，仍会像以前一样交给你处理。默认关闭 — 只有在你能接受自动确认可能出错的情况下才开启。",
     autoConfirmPaymentsToggle: "自动确认 Mandy 有信心的付款",
+    sessionDurationHint: "全天型活动（如婚礼）请留空。按小时计的拍摄请填写时长，这样 Mandy 就能根据你的日历提供准确的空档时间。",
     dangerZone: "危险操作区",
     restartInterview: "重新开始设置访谈",
     restartInterviewDesc: "清除您的访谈答案，从第一题重新开始。您的套餐及其他手动修改内容将会保留。",
@@ -240,7 +241,10 @@ const zh: typeof en = {
       availabilityRules: "档期规则",
       humanOnlyTopics: "必须交由真人处理的情况",
       whatsappPhoneId: "WhatsApp 电话号码 ID",
-      maxBookingsPerDay: "每日最多婚礼场数",
+      maxBookingsPerDay: "每日最多预订数",
+      sessionDurationMinutes: "单次拍摄时长（分钟）",
+      workingHoursStart: "工作时间开始",
+      workingHoursEnd: "工作时间结束",
     },
     placeholders: {
       photographerName: "例如：陈伟乐",
@@ -274,6 +278,7 @@ const zh: typeof en = {
       humanOnlyTopics: "例如：多日/海外婚礼定制、退款、媒体邀约",
       whatsappPhoneId: "例如：109876543210123（来自 Meta 的 WhatsApp API 后台）",
       maxBookingsPerDay: "例如：1",
+      sessionDurationMinutes: "例如：120",
     },
   },
   training: {

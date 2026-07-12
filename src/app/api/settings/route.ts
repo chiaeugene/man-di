@@ -27,6 +27,9 @@ export async function GET() {
       googleAccountEmail: profile.googleAccountEmail,
       maxBookingsPerDay: profile.maxBookingsPerDay,
       autoConfirmPayments: profile.autoConfirmPayments,
+      sessionDurationMinutes: profile.sessionDurationMinutes,
+      workingHoursStart: profile.workingHoursStart,
+      workingHoursEnd: profile.workingHoursEnd,
     };
   });
 }
@@ -39,6 +42,9 @@ const PutSchema = z.object({
   whatsappPhoneId: z.string().max(60).nullish(),
   maxBookingsPerDay: z.number().int().positive().nullish(),
   autoConfirmPayments: z.boolean().optional(),
+  sessionDurationMinutes: z.number().int().positive().max(24 * 60).nullish(),
+  workingHoursStart: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullish(),
+  workingHoursEnd: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullish(),
 });
 
 export async function PUT(req: Request) {
@@ -55,6 +61,9 @@ export async function PUT(req: Request) {
     if (body.data.whatsappPhoneId !== undefined) data.whatsappPhoneId = body.data.whatsappPhoneId?.trim() || null;
     if (body.data.maxBookingsPerDay !== undefined) data.maxBookingsPerDay = body.data.maxBookingsPerDay ?? null;
     if (body.data.autoConfirmPayments !== undefined) data.autoConfirmPayments = body.data.autoConfirmPayments;
+    if (body.data.sessionDurationMinutes !== undefined) data.sessionDurationMinutes = body.data.sessionDurationMinutes ?? null;
+    if (body.data.workingHoursStart !== undefined) data.workingHoursStart = body.data.workingHoursStart ?? null;
+    if (body.data.workingHoursEnd !== undefined) data.workingHoursEnd = body.data.workingHoursEnd ?? null;
 
     const updated = await prisma.photographerProfile.update({
       where: { id: profile.id },
@@ -69,6 +78,9 @@ export async function PUT(req: Request) {
       whatsappPhoneId: updated.whatsappPhoneId,
       maxBookingsPerDay: updated.maxBookingsPerDay,
       autoConfirmPayments: updated.autoConfirmPayments,
+      sessionDurationMinutes: updated.sessionDurationMinutes,
+      workingHoursStart: updated.workingHoursStart,
+      workingHoursEnd: updated.workingHoursEnd,
     };
   });
 }

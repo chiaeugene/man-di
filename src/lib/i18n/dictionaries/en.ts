@@ -205,6 +205,7 @@ const en = {
     autoConfirmPayments: "Auto-confirm payments (risky)",
     autoConfirmPaymentsDesc: "When on, Mandy uses AI to check a customer's payment screenshot against your bank details. If it's a clear, confident match, she automatically confirms the deposit, marks the booking, and creates the calendar event — with no review from you. If anything looks uncertain, mismatched, or unclear, she still hands it to you as before. Off by default — only turn this on if you're comfortable with automatic confirmation, since a wrong auto-confirmation is possible with any AI check.",
     autoConfirmPaymentsToggle: "Automatically confirm payments Mandy is confident about",
+    sessionDurationHint: "Leave blank for full-day events (weddings). Set it for hourly sessions so Mandy can offer exact open time slots from your calendar.",
     dangerZone: "Danger zone",
     restartInterview: "Restart setup interview",
     restartInterviewDesc: "Wipes your interview answers and starts fresh from question 1. Your packages and any manual edits here are kept.",
@@ -241,7 +242,10 @@ const en = {
       availabilityRules: "Availability rules",
       humanOnlyTopics: "Always hand to human for",
       whatsappPhoneId: "WhatsApp Phone Number ID",
-      maxBookingsPerDay: "Max weddings per day",
+      maxBookingsPerDay: "Max bookings per day",
+      sessionDurationMinutes: "Session length (minutes)",
+      workingHoursStart: "Working hours start",
+      workingHoursEnd: "Working hours end",
     },
     placeholders: {
       photographerName: "e.g. Aiman Rashid",
@@ -275,6 +279,7 @@ const en = {
       humanOnlyTopics: "e.g. Custom multi-day/overseas weddings, refunds, press requests",
       whatsappPhoneId: "e.g. 109876543210123 (from Meta's WhatsApp API dashboard)",
       maxBookingsPerDay: "e.g. 1",
+      sessionDurationMinutes: "e.g. 120",
     },
   },
   training: {

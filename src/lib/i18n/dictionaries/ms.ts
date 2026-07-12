@@ -204,6 +204,7 @@ const ms: typeof en = {
     autoConfirmPayments: "Sahkan pembayaran secara automatik (berisiko)",
     autoConfirmPaymentsDesc: "Apabila dihidupkan, Mandy menggunakan AI untuk menyemak tangkapan skrin pembayaran pelanggan berbanding butiran bank anda. Jika ia sepadan dengan jelas dan yakin, dia akan secara automatik mengesahkan deposit, menandakan tempahan, dan mencipta acara kalendar — tanpa semakan daripada anda. Jika ada sebarang keraguan, ketidaksepadanan, atau ketidakjelasan, ia masih akan diserahkan kepada anda seperti biasa. Dimatikan secara lalai — hidupkan hanya jika anda selesa dengan pengesahan automatik.",
     autoConfirmPaymentsToggle: "Sahkan secara automatik pembayaran yang Mandy yakin",
+    sessionDurationHint: "Biarkan kosong untuk acara sepanjang hari (perkahwinan). Tetapkannya untuk sesi mengikut jam supaya Mandy boleh menawarkan slot masa kosong yang tepat daripada kalendar anda.",
     dangerZone: "Zon berbahaya",
     restartInterview: "Mulakan semula sesi temu bual",
     restartInterviewDesc: "Memadam jawapan temu bual anda dan bermula semula dari soalan 1. Pakej dan perubahan manual lain akan dikekalkan.",
@@ -240,7 +241,10 @@ const ms: typeof en = {
       availabilityRules: "Peraturan ketersediaan",
       humanOnlyTopics: "Sentiasa serahkan kepada manusia untuk",
       whatsappPhoneId: "ID Nombor Telefon WhatsApp",
-      maxBookingsPerDay: "Maksimum majlis perkahwinan sehari",
+      maxBookingsPerDay: "Maksimum tempahan sehari",
+      sessionDurationMinutes: "Tempoh sesi (minit)",
+      workingHoursStart: "Waktu kerja bermula",
+      workingHoursEnd: "Waktu kerja berakhir",
     },
     placeholders: {
       photographerName: "cth. Aiman Rashid",
@@ -274,6 +278,7 @@ const ms: typeof en = {
       humanOnlyTopics: "cth. Perkahwinan pelbagai hari/luar negara tersuai, bayaran balik, permintaan media",
       whatsappPhoneId: "cth. 109876543210123 (daripada papan pemuka API WhatsApp Meta)",
       maxBookingsPerDay: "cth. 1",
+      sessionDurationMinutes: "cth. 120",
     },
   },
   training: {

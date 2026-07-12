@@ -53,6 +53,9 @@ model PhotographerProfile {
   googleAccountEmail       String? // display only, e.g. "Connected as x@gmail.com"
   maxBookingsPerDay        Int?    // photographer's same-day capacity cap; null = not enforced
   autoConfirmPayments      Boolean @default(false) // opt-in: auto-confirm deposit + book when a payment screenshot is verified with high confidence
+  sessionDurationMinutes   Int?    // typical length of one shoot; null = full-day events (e.g. weddings)
+  workingHoursStart        String? // "09:00" (24h); code default 09:00 when unset
+  workingHoursEnd          String? // "19:00" (24h); code default 19:00 when unset
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -169,6 +172,7 @@ model Lead {
   customerName String?
   phone        String?
   eventDate    String? // free text until parsed ("2026-11-14" or "Nov next year")
+  eventTime    String? // customer's requested start time, "HH:MM" 24h, extracted like eventDate
   location     String?
   eventType    String? // actual day / pre-wedding / both / ROM ...
   budgetRange  String?

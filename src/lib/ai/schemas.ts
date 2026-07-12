@@ -76,6 +76,7 @@ export const EngineOutputSchema = z.object({
     .object({
       customerName: z.string().nullish(),
       eventDate: z.string().nullish(),
+      eventTime: z.string().nullish(),
       location: z.string().nullish(),
       eventType: z.string().nullish(),
       budgetRange: z.string().nullish(),

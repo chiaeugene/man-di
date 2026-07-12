@@ -16,19 +16,57 @@ const NO_DATE_AVAILABILITY_FALLBACK =
 function formatAvailabilityLine(availability: DateAvailability | null | undefined): string {
   if (!availability) return line("Live calendar check", NO_DATE_AVAILABILITY_FALLBACK);
 
-  const { isoDate, googleChecked, googleBusy, internalBookedCount, maxBookingsPerDay, internalAtCapacity } =
-    availability;
+  const {
+    isoDate,
+    googleChecked,
+    googleBusy,
+    internalBookedCount,
+    maxBookingsPerDay,
+    internalAtCapacity,
+    requestedTime,
+    requestedTimeClash,
+    openSlots,
+  } = availability;
 
-  if (googleBusy) {
-    return line(
-      "Live calendar check",
-      `⚠️ Google Calendar shows an existing event on ${isoDate} — treat this as a likely conflict. Tell the customer honestly and hand over to the photographer to confirm rather than promising the date.`
-    );
-  }
   if (internalAtCapacity) {
     return line(
       "Live calendar check",
       `Internal records show ${internalBookedCount}/${maxBookingsPerDay} booking(s) already confirmed for ${isoDate} — capacity is full. Flag this to the customer and hand over to the photographer rather than accepting a new booking for this date.`
+    );
+  }
+
+  // Time-slot mode: session duration is configured, so speak in exact slots.
+  if (googleChecked && openSlots != null) {
+    if (openSlots.length === 0) {
+      return line(
+        "Live calendar check",
+        `⚠️ ${isoDate} has no open session slots left within working hours. Tell the customer honestly, offer another date, or hand over if they insist on this one.`
+      );
+    }
+    const slotList = openSlots.join(", ");
+    if (requestedTime && requestedTimeClash) {
+      return line(
+        "Live calendar check",
+        `⚠️ The requested time ${requestedTime} on ${isoDate} clashes with an existing commitment. Open slots that day: ${slotList}. Honestly offer one of these alternatives instead — never promise the clashing time.`
+      );
+    }
+    if (requestedTime) {
+      return line(
+        "Live calendar check",
+        `Google Calendar checked for ${isoDate}: the requested time ${requestedTime} is FREE. Other open slots that day: ${slotList}. You may confirm this time confidently — still follow the payment-collection guardrail below.`
+      );
+    }
+    return line(
+      "Live calendar check",
+      `Google Calendar checked for ${isoDate}: open session slots are ${slotList}. Offer these specific start times confidently when the customer asks about timing — still follow the payment-collection guardrail below.`
+    );
+  }
+
+  // Full-day mode (no session duration configured): day-level verdicts.
+  if (googleBusy) {
+    return line(
+      "Live calendar check",
+      `⚠️ Google Calendar shows an existing event on ${isoDate} — treat this as a likely conflict. Tell the customer honestly and hand over to the photographer to confirm rather than promising the date.`
     );
   }
   if (googleChecked) {
@@ -208,12 +246,22 @@ This is the first layer of how you sell, before any package or price comes up �
       "What we already know about this customer (do not re-ask what is known)",
       line("Name", lead.customerName) +
         line("Event date", lead.eventDate) +
+        line("Event start time", lead.eventTime) +
         line("Location", lead.location) +
         line("Event type", lead.eventType) +
         line("Budget range", lead.budgetRange) +
         line("Current lead status", lead.status) +
         line("Conversation summary so far", lead.summary) || "- Nothing yet.\n"
     );
+
+    if (lead.status === "Booked") {
+      prompt += section(
+        "This booking is CONFIRMED",
+        `This customer's deposit is confirmed and the booking is secured — do NOT re-sell, re-quote, or re-collect payment.
+- Your remaining job is completing the booking details: ${!lead.eventDate ? "the exact event DATE is still missing — getting it is your top priority so the calendar entry can be created. " : ""}${lead.eventDate && !lead.eventTime ? "the preferred START TIME is still missing — ask for it so the schedule is exact. " : ""}${lead.eventDate && lead.eventTime ? "date and time are locked in; just answer questions warmly and help them prepare. " : ""}
+- Answer logistics questions (what to wear, how to prepare, what happens next) warmly and concretely.`
+      );
+    }
   }
 
   prompt += section(
@@ -260,13 +308,13 @@ Your literal, complete response must be exactly one JSON object — nothing befo
 {
   "reply": "your customer-facing message (in the customer's language)",
   "detectedLanguage": "en" | "zh" | "ms" | "mixed",
-  "extracted": { "customerName": string|null, "eventDate": string|null, "location": string|null, "eventType": string|null, "budgetRange": string|null, "interestedPackage": string|null },
+  "extracted": { "customerName": string|null, "eventDate": string|null, "eventTime": string|null, "location": string|null, "eventType": string|null, "budgetRange": string|null, "interestedPackage": string|null },
   "suggestedStatus": one of ${JSON.stringify(LEAD_STATUSES)} or null,
   "takeover": { "needed": boolean, "reason": string|null },
   "confidence": number between 0 and 1,
   "sendAttachmentIds": string[]
 }
-"extracted" holds only NEW facts learned from the customer's latest message (null otherwise). Resolve relative dates against today's date given above. "eventDate" must be a resolved absolute calendar date in strict "YYYY-MM-DD" format (e.g. "2026-11-14") whenever the customer has given or confirmed a specific day — never a relative phrase, a month-only guess, or free text. If only a vague/partial date is known (e.g. "sometime next year", month with no day), leave "eventDate" null rather than guessing a day.
+"extracted" holds only NEW facts learned from the customer's latest message (null otherwise). Resolve relative dates against today's date given above. "eventDate" must be a resolved absolute calendar date in strict "YYYY-MM-DD" format (e.g. "2026-11-14") whenever the customer has given or confirmed a specific day — never a relative phrase, a month-only guess, or free text. If only a vague/partial date is known (e.g. "sometime next year", month with no day), leave "eventDate" null rather than guessing a day. "eventTime" must be a specific start time in strict 24-hour "HH:MM" format (e.g. "08:00", "14:30") only when the customer has given or agreed to a specific time — resolve "8am"/"早上8点" style phrases; leave null for vague times ("morning", "afternoon") rather than guessing.
 "suggestedStatus": your judgement of the lead's stage. Note the system will only auto-apply ${JSON.stringify(AI_ALLOWED_STATUSES)} — "Deposit Paid" and "Booked" are set by the photographer only.
 "takeover"/"confidence": takeover.needed=true and low confidence FREEZE this conversation until the photographer manually steps in — the customer gets silence after your reply. Reserve that for the genuine hand-over situations listed in the guardrails. Routine sales conversation — answering questions, qualifying, recommending, handling ordinary objections — is your job; do it confidently (0.7+) rather than escalating.
 "sendAttachmentIds": exact attachment ids (from the package catalog above) to send with this reply, or an empty array. Only include one when it clearly helps right now — e.g. the customer asked for the price list/brochure, or you just recommended a package and a sample photo or PDF for it exists. Never invent an id that wasn't listed. Don't attach something with every message.
