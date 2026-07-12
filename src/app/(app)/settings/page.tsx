@@ -13,6 +13,7 @@ interface SettingsData {
   bookingBrain: Brain;
   whatsappPhoneId: string;
   maxBookingsPerDay: number | null;
+  autoConfirmPayments: boolean;
 }
 
 interface GoogleCalendarState {
@@ -112,6 +113,7 @@ function SettingsPageInner() {
           bookingBrain: d.bookingBrain ?? {},
           whatsappPhoneId: d.whatsappPhoneId ?? "",
           maxBookingsPerDay: d.maxBookingsPerDay ?? null,
+          autoConfirmPayments: Boolean(d.autoConfirmPayments),
         });
         setGcal({ connected: Boolean(d.googleCalendarConnected), accountEmail: d.googleAccountEmail ?? null });
       });
@@ -308,6 +310,23 @@ function SettingsPageInner() {
               </p>
             )}
           </div>
+        </section>
+
+        <section className="rounded-3xl border border-amber-200 bg-champagne p-6 shadow-petal">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-gold"><IconAlert size={15} /></span>
+            <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-amber-900">{t("settings.autoConfirmPayments")}</h2>
+          </div>
+          <p className="mb-4 text-xs leading-relaxed text-amber-900/70">{t("settings.autoConfirmPaymentsDesc")}</p>
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-amber-900">
+            <input
+              type="checkbox"
+              checked={data.autoConfirmPayments}
+              onChange={(e) => setData({ ...data, autoConfirmPayments: e.target.checked })}
+              className="h-4 w-4 cursor-pointer accent-rose-600"
+            />
+            {t("settings.autoConfirmPaymentsToggle")}
+          </label>
         </section>
 
         <section className="rounded-3xl border border-red-200 bg-red-50/40 p-6 shadow-petal">

@@ -26,6 +26,7 @@ export async function GET() {
       googleCalendarConnected: profile.googleCalendarConnected,
       googleAccountEmail: profile.googleAccountEmail,
       maxBookingsPerDay: profile.maxBookingsPerDay,
+      autoConfirmPayments: profile.autoConfirmPayments,
     };
   });
 }
@@ -37,6 +38,7 @@ const PutSchema = z.object({
   packageRules: PackageRulesSchema.optional(),
   whatsappPhoneId: z.string().max(60).nullish(),
   maxBookingsPerDay: z.number().int().positive().nullish(),
+  autoConfirmPayments: z.boolean().optional(),
 });
 
 export async function PUT(req: Request) {
@@ -45,13 +47,14 @@ export async function PUT(req: Request) {
     const body = PutSchema.safeParse(await req.json());
     if (!body.success) throw new ApiError(400, "Invalid settings data.");
 
-    const data: Record<string, string | number | null> = {};
+    const data: Record<string, string | number | boolean | null> = {};
     if (body.data.brandBrain) data.brandBrain = toJson(body.data.brandBrain);
     if (body.data.salesBrain) data.salesBrain = toJson(body.data.salesBrain);
     if (body.data.bookingBrain) data.bookingBrain = toJson(body.data.bookingBrain);
     if (body.data.packageRules) data.packageRules = toJson(body.data.packageRules);
     if (body.data.whatsappPhoneId !== undefined) data.whatsappPhoneId = body.data.whatsappPhoneId?.trim() || null;
     if (body.data.maxBookingsPerDay !== undefined) data.maxBookingsPerDay = body.data.maxBookingsPerDay ?? null;
+    if (body.data.autoConfirmPayments !== undefined) data.autoConfirmPayments = body.data.autoConfirmPayments;
 
     const updated = await prisma.photographerProfile.update({
       where: { id: profile.id },
@@ -65,6 +68,7 @@ export async function PUT(req: Request) {
       packageRules: PackageRulesSchema.parse(parseJson(updated.packageRules, {})),
       whatsappPhoneId: updated.whatsappPhoneId,
       maxBookingsPerDay: updated.maxBookingsPerDay,
+      autoConfirmPayments: updated.autoConfirmPayments,
     };
   });
 }

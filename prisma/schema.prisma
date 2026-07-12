@@ -52,6 +52,7 @@ model PhotographerProfile {
   googleCalendarId         String? // which calendar to check/write, default "primary"
   googleAccountEmail       String? // display only, e.g. "Connected as x@gmail.com"
   maxBookingsPerDay        Int?    // photographer's same-day capacity cap; null = not enforced
+  autoConfirmPayments      Boolean @default(false) // opt-in: auto-confirm deposit + book when a payment screenshot is verified with high confidence
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

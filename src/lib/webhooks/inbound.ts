@@ -2,6 +2,10 @@ import type { Conversation, Lead, PhotographerProfile } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { generateMandyReply, recordExchange, refreshLeadSummary } from "@/lib/ai/engine";
 import type { LeadSource } from "@/lib/constants";
+import { parseJson, toJson } from "@/lib/json";
+import { BookingBrainSchema } from "@/lib/ai/schemas";
+import { verifyPaymentProof, isConfidentPaymentMatch } from "@/lib/ai/vision";
+import { confirmDepositAndBook } from "@/lib/leads/confirm-deposit";
 
 type LeadWithConversation = Lead & { conversation: Conversation | null };
 
@@ -125,6 +129,16 @@ export async function recordInboundImageMessage(opts: {
   // Already mid-review — record the extra image but don't repeat the ack.
   if (lead.needsHuman) return null;
 
+  // Opt-in, high-risk exception to the "AI cannot set money states" rule —
+  // see src/lib/ai/vision.ts and src/lib/leads/confirm-deposit.ts. Only
+  // engages when the photographer has explicitly turned this on; the vision
+  // model itself never touches the DB, it only returns a verdict that's
+  // checked against a fixed threshold in plain code below.
+  if (profile.autoConfirmPayments) {
+    const verification = await verifyAndMaybeConfirm(profile, lead, inboundAttachmentId, conversationId);
+    if (verification) return verification;
+  }
+
   const photographer = profile.photographerName || "the team";
   const ackReply = `Thanks for sending this! I've forwarded it to ${photographer} to verify — they'll confirm shortly 😊`;
 
@@ -142,6 +156,46 @@ export async function recordInboundImageMessage(opts: {
   });
 
   return { ackReply };
+}
+
+// Best-effort: any failure (vision call errors, low confidence, mismatch)
+// returns null so the caller falls through to the normal human-handoff path.
+async function verifyAndMaybeConfirm(
+  profile: PhotographerProfile,
+  lead: Lead,
+  inboundAttachmentId: string,
+  conversationId: string
+): Promise<{ ackReply: string } | null> {
+  try {
+    const attachment = await prisma.inboundAttachment.findUnique({ where: { id: inboundAttachmentId } });
+    if (!attachment) return null;
+
+    const booking = BookingBrainSchema.parse(parseJson(profile.bookingBrain, {}));
+    const verification = await verifyPaymentProof({
+      imageData: attachment.data,
+      mimeType: attachment.mimeType,
+      paymentMethods: booking.paymentMethods || "",
+      paymentInstructions: booking.paymentInstructions || "",
+    });
+    if (!verification || !isConfidentPaymentMatch(verification)) return null;
+
+    const updatedLead = await confirmDepositAndBook(profile, lead);
+    const ackReply = `Payment verified! ✅ RM${verification.extractedAmount} confirmed — your booking is secured 🎉`;
+
+    await prisma.message.create({
+      data: {
+        conversationId,
+        role: "MANDY",
+        content: ackReply,
+        meta: toJson({ paymentVerification: verification, leadStatus: updatedLead.status }),
+      },
+    });
+
+    return { ackReply };
+  } catch (err) {
+    console.error("[vision] auto-confirm failed (non-fatal, falling back to human review)", err);
+    return null;
+  }
 }
 
 // Records an inbound message the app can't confidently auto-handle (e.g. a

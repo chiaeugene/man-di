@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireProfile } from "@/lib/tenant";
 import { handle, ApiError } from "@/lib/api";
 import { LEAD_STATUSES, DEPOSIT_STATUSES } from "@/lib/constants";
-import { syncGoogleCalendarOnLeadUpdate } from "@/lib/google-calendar/sync";
+import { applyLeadEdit } from "@/lib/leads/confirm-deposit";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -41,8 +41,12 @@ const PatchSchema = z.object({
   nextAction: z.string().max(500).nullish(),
 });
 
-// Manual edits by the photographer. This is the ONLY path to money states
-// ("Deposit Paid", "Booked") — the AI cannot set them.
+// Manual edits by the photographer. This is the primary path to money
+// states ("Deposit Paid", "Booked") — the one deliberate exception is a
+// high-confidence, opt-in AI payment verification (see
+// src/lib/webhooks/inbound.ts's recordInboundImageMessage, gated behind
+// profile.autoConfirmPayments and a hard confidence threshold in
+// src/lib/ai/vision.ts), which calls the same applyLeadEdit helper below.
 export async function PATCH(req: Request, { params }: Params) {
   return handle(async () => {
     const profile = await requireProfile();
@@ -54,16 +58,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const body = PatchSchema.safeParse(await req.json());
     if (!body.success) throw new ApiError(400, "Invalid lead data.");
 
-    const data: Record<string, unknown> = { ...body.data };
-
-    // Confirming the deposit implies the booking is secured.
-    if (body.data.depositStatus === "CONFIRMED" && !body.data.status) {
-      data.status = "Booked";
-    }
-
-    await syncGoogleCalendarOnLeadUpdate(profile, lead, data);
-
-    const updated = await prisma.lead.update({ where: { id }, data });
+    const updated = await applyLeadEdit(profile, lead, { ...body.data });
     return { lead: updated };
   });
 }
