@@ -36,6 +36,7 @@ export async function POST(req: Request) {
         profile,
         lead: { ...conversation.lead, conversation },
         inboundAttachmentId: body.data.imageAttachmentId,
+        caption: body.data.message,
       });
       const updatedLead = await prisma.lead.findUniqueOrThrow({ where: { id: conversation.lead.id } });
       return {

@@ -97,8 +97,9 @@ export async function recordInboundImageMessage(opts: {
   lead: LeadWithConversation;
   inboundAttachmentId: string;
   externalMessageId?: string;
+  caption?: string; // text sent alongside the image in the same message, if any
 }): Promise<{ ackReply: string } | null> {
-  const { profile, inboundAttachmentId, externalMessageId } = opts;
+  const { profile, inboundAttachmentId, externalMessageId, caption } = opts;
   let { lead } = opts;
 
   if (externalMessageId) {
@@ -120,7 +121,7 @@ export async function recordInboundImageMessage(opts: {
     data: {
       conversationId,
       role: "CUSTOMER",
-      content: "[Image attached]",
+      content: caption?.trim() || "[Image attached]",
       inboundAttachmentIds: JSON.stringify([inboundAttachmentId]),
       externalId: externalMessageId,
     },

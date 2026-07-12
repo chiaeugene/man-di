@@ -59,7 +59,7 @@ export function ChatWindow({
 }: {
   messages: ChatMsg[];
   onSend: (text: string) => void | Promise<void>;
-  onSendImage?: (file: File) => void | Promise<void>;
+  onSendImage?: (file: File, caption: string) => void | Promise<void>;
   disabled?: boolean;
   placeholder?: string;
   busy?: boolean;
@@ -84,8 +84,10 @@ export function ChatWindow({
   async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-selecting the same file later
-    if (!file || !onSendImage) return;
-    await onSendImage(file);
+    if (!file || !onSendImage || busy) return;
+    const caption = input.trim();
+    setInput("");
+    await onSendImage(file, caption);
   }
 
   return (
@@ -152,13 +154,13 @@ export function ChatWindow({
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handleFileSelected}
-              disabled={disabled || busy}
+              disabled={busy}
               className="hidden"
             />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={disabled || busy}
+              disabled={busy}
               aria-label="Attach a photo"
               className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-rose-200 text-rose-500 transition-colors duration-150 hover:bg-rose-50 disabled:opacity-40"
             >

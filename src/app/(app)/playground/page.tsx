@@ -76,7 +76,7 @@ export default function PlaygroundPage() {
     }
   }
 
-  async function sendImage(file: File) {
+  async function sendImage(file: File, caption: string) {
     if (!conversationId) return;
     setBusy(true);
     try {
@@ -92,13 +92,17 @@ export default function PlaygroundPage() {
       const attachment: ChatAttachment = uploadData.attachment;
       setMessages((m) => [
         ...m,
-        { role: "me", content: "", badge: t("leadDetail.you") + " (customer)", attachments: [attachment] },
+        { role: "me", content: caption, badge: t("leadDetail.you") + " (customer)", attachments: [attachment] },
       ]);
 
       const res = await fetch("/api/playground/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, imageAttachmentId: attachment.id }),
+        body: JSON.stringify({
+          conversationId,
+          message: caption || undefined,
+          imageAttachmentId: attachment.id,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -112,7 +116,9 @@ export default function PlaygroundPage() {
         ]);
       }
       setStatus(data.status);
-      if (data.takeover?.needed) {
+      // Already in takeover from an earlier message — don't re-announce it
+      // every time another screenshot comes in.
+      if (data.takeover?.needed && !takeover) {
         const reason = data.takeover.reason ?? t("playground.takeoverGeneric");
         setTakeover(reason);
         setMessages((m) => [

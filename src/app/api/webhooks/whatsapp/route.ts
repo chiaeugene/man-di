@@ -29,7 +29,7 @@ interface WhatsAppMessage {
   from: string;
   type: string;
   text?: { body: string };
-  image?: { id: string; mime_type?: string };
+  image?: { id: string; mime_type?: string; caption?: string };
 }
 
 interface WhatsAppChangeValue {
@@ -124,6 +124,7 @@ export async function POST(req: Request) {
                 lead,
                 inboundAttachmentId: attachment.id,
                 externalMessageId: message.id,
+                caption: message.image.caption,
               });
               if (result?.ackReply) await sendWhatsAppText(phoneNumberId, message.from, result.ackReply);
               continue;
