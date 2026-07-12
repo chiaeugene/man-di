@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconHeartFilled, IconSend, IconSparkles, IconFileText } from "@/components/Icons";
+import { IconHeartFilled, IconSend, IconSparkles, IconFileText, IconPaperclip } from "@/components/Icons";
 
 export interface ChatAttachment {
   id: string;
@@ -51,6 +51,7 @@ function MandyAvatar() {
 export function ChatWindow({
   messages,
   onSend,
+  onSendImage,
   disabled,
   placeholder,
   busyLabel = "Mandy is typing",
@@ -58,6 +59,7 @@ export function ChatWindow({
 }: {
   messages: ChatMsg[];
   onSend: (text: string) => void | Promise<void>;
+  onSendImage?: (file: File) => void | Promise<void>;
   disabled?: boolean;
   placeholder?: string;
   busy?: boolean;
@@ -65,6 +67,7 @@ export function ChatWindow({
 }) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -76,6 +79,13 @@ export function ChatWindow({
     if (!text || disabled || busy) return;
     setInput("");
     await onSend(text);
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file || !onSendImage) return;
+    await onSendImage(file);
   }
 
   return (
@@ -135,6 +145,27 @@ export function ChatWindow({
         <div ref={bottomRef} />
       </div>
       <form onSubmit={submit} className="flex gap-2.5 border-t border-rose-100 bg-white p-4">
+        {onSendImage && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileSelected}
+              disabled={disabled || busy}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || busy}
+              aria-label="Attach a photo"
+              className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-rose-200 text-rose-500 transition-colors duration-150 hover:bg-rose-50 disabled:opacity-40"
+            >
+              <IconPaperclip size={17} />
+            </button>
+          </>
+        )}
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}

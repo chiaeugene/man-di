@@ -8,6 +8,7 @@ import { LeadActions } from "@/components/LeadActions";
 import { getServerT } from "@/lib/i18n/server";
 import { parseJson } from "@/lib/json";
 import { serializeAttachment } from "@/lib/attachments";
+import { serializeInboundAttachment } from "@/lib/inbound-attachments";
 import {
   IconAlert,
   IconArrowLeft,
@@ -40,6 +41,17 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             where: { id: { in: allAttachmentIds }, profileId: profile.id },
           })
         ).map((a) => [a.id, serializeAttachment(a)])
+      )
+    : {};
+
+  const allInboundAttachmentIds = messages.flatMap((m) => parseJson<string[]>(m.inboundAttachmentIds, []));
+  const inboundAttachmentsById = allInboundAttachmentIds.length
+    ? Object.fromEntries(
+        (
+          await prisma.inboundAttachment.findMany({
+            where: { id: { in: allInboundAttachmentIds }, profileId: profile.id },
+          })
+        ).map((a) => [a.id, serializeInboundAttachment(a)])
       )
     : {};
 
@@ -88,9 +100,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               <p className="text-sm text-wine-soft/50">{t("leadDetail.noMessages")}</p>
             ) : (
               messages.map((m) => {
-                const attachments = parseJson<string[]>(m.attachmentIds, [])
-                  .map((id) => attachmentsById[id])
-                  .filter(Boolean);
+                const attachments = [
+                  ...parseJson<string[]>(m.attachmentIds, []).map((id) => attachmentsById[id]),
+                  ...parseJson<string[]>(m.inboundAttachmentIds, []).map((id) => inboundAttachmentsById[id]),
+                ].filter(Boolean);
                 return (
                   <div key={m.id} className={`flex items-start gap-2.5 ${m.role === "CUSTOMER" ? "justify-start" : "justify-end"}`}>
                     <div

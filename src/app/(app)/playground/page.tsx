@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChatWindow, type ChatMsg } from "@/components/Chat";
+import { ChatWindow, type ChatMsg, type ChatAttachment } from "@/components/Chat";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { IconAlert, IconArrowRight, IconFlask, IconSparkles } from "@/components/Icons";
 import { useI18n } from "@/lib/i18n/LocaleProvider";
@@ -76,6 +76,58 @@ export default function PlaygroundPage() {
     }
   }
 
+  async function sendImage(file: File) {
+    if (!conversationId) return;
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("conversationId", conversationId);
+      form.append("file", file);
+      const uploadRes = await fetch("/api/playground/inbound-image", { method: "POST", body: form });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) {
+        setMessages((m) => [...m, { role: "system", content: uploadData.error ?? "Could not upload image." }]);
+        return;
+      }
+      const attachment: ChatAttachment = uploadData.attachment;
+      setMessages((m) => [
+        ...m,
+        { role: "me", content: "", badge: t("leadDetail.you") + " (customer)", attachments: [attachment] },
+      ]);
+
+      const res = await fetch("/api/playground/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, imageAttachmentId: attachment.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessages((m) => [...m, { role: "system", content: data.error ?? "Something went wrong." }]);
+        return;
+      }
+      if (data.reply) {
+        setMessages((m) => [
+          ...m,
+          { role: "mandy", content: data.reply, badge: t("leadDetail.mandy") },
+        ]);
+      }
+      setStatus(data.status);
+      if (data.takeover?.needed) {
+        const reason = data.takeover.reason ?? t("playground.takeoverGeneric");
+        setTakeover(reason);
+        setMessages((m) => [
+          ...m,
+          {
+            role: "system",
+            content: `${t("playground.takeoverTriggered")} ${reason} ${t("playground.takeoverExplain")}`,
+          },
+        ]);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl animate-fade-up">
       <div className="mb-5 flex items-end justify-between gap-4">
@@ -118,6 +170,7 @@ export default function PlaygroundPage() {
         <ChatWindow
           messages={messages}
           onSend={send}
+          onSendImage={sendImage}
           busy={busy}
           disabled={Boolean(takeover)}
           placeholder={takeover ? t("playground.placeholderTakeover") : t("playground.placeholderTry")}

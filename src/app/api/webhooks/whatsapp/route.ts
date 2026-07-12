@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyWhatsAppSignature } from "@/lib/whatsapp/verify";
-import { sendWhatsAppText, sendWhatsAppAttachmentsByIds } from "@/lib/whatsapp/client";
-import { handleInboundMessage, recordUnhandledInboundMessage } from "@/lib/webhooks/inbound";
+import { sendWhatsAppText, sendWhatsAppAttachmentsByIds, fetchWhatsAppMediaBytes } from "@/lib/whatsapp/client";
+import {
+  handleInboundMessage,
+  recordUnhandledInboundMessage,
+  recordInboundImageMessage,
+  findOrCreateLeadForInbound,
+} from "@/lib/webhooks/inbound";
+import { inboundMimeToType, INBOUND_ATTACHMENT_MAX_BYTES } from "@/lib/inbound-attachments";
 
 // Meta's one-time webhook verification handshake (configured in the Meta App
 // dashboard). No auth needed — it's just proving we control this URL.
@@ -23,6 +29,7 @@ interface WhatsAppMessage {
   from: string;
   type: string;
   text?: { body: string };
+  image?: { id: string; mime_type?: string };
 }
 
 interface WhatsAppChangeValue {
@@ -97,6 +104,34 @@ export async function POST(req: Request) {
 
       for (const message of value.messages) {
         try {
+          if (message.type === "image" && message.image?.id) {
+            const media = await fetchWhatsAppMediaBytes(message.image.id);
+            const fileType = media ? inboundMimeToType(media.mimeType) : null;
+            if (media && fileType && media.data.length <= INBOUND_ATTACHMENT_MAX_BYTES) {
+              const attachment = await prisma.inboundAttachment.create({
+                data: {
+                  profileId: profile.id,
+                  fileName: `whatsapp-${message.id}`,
+                  fileType,
+                  mimeType: media.mimeType,
+                  data: media.data,
+                  sizeBytes: media.data.length,
+                },
+              });
+              const lead = await findOrCreateLeadForInbound(profile, "WHATSAPP", message.from);
+              const result = await recordInboundImageMessage({
+                profile,
+                lead,
+                inboundAttachmentId: attachment.id,
+                externalMessageId: message.id,
+              });
+              if (result?.ackReply) await sendWhatsAppText(phoneNumberId, message.from, result.ackReply);
+              continue;
+            }
+            // Download or validation failed — fall through to the generic
+            // unsupported-message handling below (never worse than before).
+          }
+
           if (message.type !== "text" || !message.text?.body) {
             await recordUnhandledInboundMessage({
               profile,

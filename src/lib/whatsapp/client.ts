@@ -112,3 +112,46 @@ export async function sendWhatsAppAttachmentsByIds(
     if (attachment) await sendWhatsAppAttachment(phoneNumberId, to, attachment);
   }
 }
+
+// Downloads a customer-sent media item (e.g. a payment-proof photo). Meta's
+// media API is a two-step fetch: the webhook only gives you a media id, which
+// resolves to a short-lived download url + mime type, which you then fetch
+// with the same bearer token. Best-effort — never throws, matching the rest
+// of this file's discipline (a failed download must never break the
+// webhook's required fast response back to Meta).
+export async function fetchWhatsAppMediaBytes(
+  mediaId: string
+): Promise<{ data: Uint8Array<ArrayBuffer>; mimeType: string } | null> {
+  const token = accessToken();
+  if (!token) {
+    console.error("[whatsapp] WHATSAPP_ACCESS_TOKEN not configured — cannot fetch media.");
+    return null;
+  }
+  try {
+    const version = process.env.WHATSAPP_API_VERSION || "v21.0";
+    const metaRes = await fetch(`https://graph.facebook.com/${version}/${mediaId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!metaRes.ok) {
+      console.error("[whatsapp] media metadata fetch failed", metaRes.status, await metaRes.text());
+      return null;
+    }
+    const meta = (await metaRes.json()) as { url?: string; mime_type?: string };
+    if (!meta.url || !meta.mime_type) return null;
+
+    const fileRes = await fetch(meta.url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!fileRes.ok) {
+      console.error("[whatsapp] media download failed", fileRes.status);
+      return null;
+    }
+    // fetch's arrayBuffer() is typed as ArrayBufferLike (covers the
+    // never-actually-possible SharedArrayBuffer case) — Prisma's Bytes
+    // column type wants the narrower ArrayBuffer-backed Uint8Array, which
+    // this always genuinely is at runtime.
+    const data = new Uint8Array(await fileRes.arrayBuffer()) as Uint8Array<ArrayBuffer>;
+    return { data, mimeType: meta.mime_type };
+  } catch (err) {
+    console.error("[whatsapp] fetchWhatsAppMediaBytes error (non-fatal)", err);
+    return null;
+  }
+}

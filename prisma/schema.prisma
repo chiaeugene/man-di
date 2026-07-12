@@ -110,6 +110,21 @@ model PackageAttachment {
   @@index([profileId])
 }
 
+model InboundAttachment {
+  id        String @id @default(cuid())
+  profileId String
+
+  fileName  String
+  fileType  String // PHOTO (images only for now — no inbound PDFs/documents)
+  mimeType  String
+  data      Bytes
+  sizeBytes Int
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId])
+}
+
 // Reference material (PDF, pasted text, or a fetched URL) the photographer
 // supplies during the AI-led setup interview. Supplementary only — the
 // interview prompt treats extractedText as untrusted, unverified content.
@@ -207,6 +222,7 @@ model Message {
   content String
   meta    String? // JSON: extracted facts, suggestedStatus, takeover verdict, detectedLanguage
   attachmentIds String? // JSON string[] of PackageAttachment ids sent with this message
+  inboundAttachmentIds String? // JSON string[] of InboundAttachment ids the customer sent with this message
   externalId    String? @unique // e.g. WhatsApp wamid — dedupes redelivered webhook events
 
   createdAt DateTime @default(now())

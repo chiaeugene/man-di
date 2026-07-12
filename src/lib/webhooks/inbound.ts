@@ -1,25 +1,18 @@
-import type { PhotographerProfile } from "@prisma/client";
+import type { Conversation, Lead, PhotographerProfile } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { generateMandyReply, recordExchange, refreshLeadSummary } from "@/lib/ai/engine";
 import type { LeadSource } from "@/lib/constants";
 
-// Channel-agnostic core: WhatsApp today, Instagram/Messenger can reuse this
-// unchanged later. Runs the exact same generateMandyReply/recordExchange
-// pipeline Playground already uses — a new channel, not a new sales brain.
-export async function handleInboundMessage(opts: {
-  profile: PhotographerProfile;
-  source: LeadSource;
-  externalContactId: string; // e.g. WhatsApp wa_id (phone number)
-  externalMessageId: string; // e.g. WhatsApp wamid — used for dedupe
-  customerMessage: string;
-}): Promise<{ reply: string; attachmentIds: string[] } | null> {
-  const { profile, source, externalContactId, externalMessageId, customerMessage } = opts;
+type LeadWithConversation = Lead & { conversation: Conversation | null };
 
-  // Meta redelivers webhook events aggressively; never process the same
-  // message twice (would double-reply and duplicate the conversation).
-  const already = await prisma.message.findUnique({ where: { externalId: externalMessageId } });
-  if (already) return null;
-
+// Shared by handleInboundMessage and the image-message path below — find the
+// lead for this channel contact (or create one), and make sure it has a
+// conversation to write into.
+export async function findOrCreateLeadForInbound(
+  profile: PhotographerProfile,
+  source: LeadSource,
+  externalContactId: string
+): Promise<LeadWithConversation> {
   let lead = await prisma.lead.findFirst({
     where: { profileId: profile.id, phone: externalContactId, source },
     include: { conversation: true },
@@ -43,6 +36,27 @@ export async function handleInboundMessage(opts: {
       }),
     };
   }
+  return lead;
+}
+
+// Channel-agnostic core: WhatsApp today, Instagram/Messenger can reuse this
+// unchanged later. Runs the exact same generateMandyReply/recordExchange
+// pipeline Playground already uses — a new channel, not a new sales brain.
+export async function handleInboundMessage(opts: {
+  profile: PhotographerProfile;
+  source: LeadSource;
+  externalContactId: string; // e.g. WhatsApp wa_id (phone number)
+  externalMessageId: string; // e.g. WhatsApp wamid — used for dedupe
+  customerMessage: string;
+}): Promise<{ reply: string; attachmentIds: string[] } | null> {
+  const { profile, source, externalContactId, externalMessageId, customerMessage } = opts;
+
+  // Meta redelivers webhook events aggressively; never process the same
+  // message twice (would double-reply and duplicate the conversation).
+  const already = await prisma.message.findUnique({ where: { externalId: externalMessageId } });
+  if (already) return null;
+
+  const lead = await findOrCreateLeadForInbound(profile, source, externalContactId);
   const conversationId = lead.conversation!.id;
 
   // Photographer has taken over — record the inbound message so the CRM
@@ -67,6 +81,67 @@ export async function handleInboundMessage(opts: {
   refreshLeadSummary(profile, updatedLead, conversationId).catch(() => {});
 
   return { reply: output.reply, attachmentIds };
+}
+
+// A customer-sent image (e.g. proof of payment) never reaches the AI — it's
+// handled deterministically, same as any other message type Mandy can't
+// process herself. Stores the image reference on the message, hands the lead
+// to the photographer, and returns a short static acknowledgment (not
+// AI-generated) so the customer isn't left with silence.
+export async function recordInboundImageMessage(opts: {
+  profile: PhotographerProfile;
+  lead: LeadWithConversation;
+  inboundAttachmentId: string;
+  externalMessageId?: string;
+}): Promise<{ ackReply: string } | null> {
+  const { profile, inboundAttachmentId, externalMessageId } = opts;
+  let { lead } = opts;
+
+  if (externalMessageId) {
+    const already = await prisma.message.findUnique({ where: { externalId: externalMessageId } });
+    if (already) return null;
+  }
+
+  if (!lead.conversation) {
+    lead = {
+      ...lead,
+      conversation: await prisma.conversation.create({
+        data: { profileId: profile.id, kind: lead.source as LeadSource, leadId: lead.id },
+      }),
+    };
+  }
+  const conversationId = lead.conversation!.id;
+
+  await prisma.message.create({
+    data: {
+      conversationId,
+      role: "CUSTOMER",
+      content: "[Image attached]",
+      inboundAttachmentIds: JSON.stringify([inboundAttachmentId]),
+      externalId: externalMessageId,
+    },
+  });
+
+  // Already mid-review — record the extra image but don't repeat the ack.
+  if (lead.needsHuman) return null;
+
+  const photographer = profile.photographerName || "the team";
+  const ackReply = `Thanks for sending this! I've forwarded it to ${photographer} to verify — they'll confirm shortly 😊`;
+
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: {
+      needsHuman: true,
+      status: "Human Takeover Needed",
+      takeoverReason: "Customer sent an image (likely proof of payment) — review it in this lead's conversation.",
+    },
+  });
+
+  await prisma.message.create({
+    data: { conversationId, role: "MANDY", content: ackReply },
+  });
+
+  return { ackReply };
 }
 
 // Records an inbound message the app can't confidently auto-handle (e.g. a
