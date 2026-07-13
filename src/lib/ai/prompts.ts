@@ -26,7 +26,15 @@ function formatAvailabilityLine(availability: DateAvailability | null | undefine
     requestedTime,
     requestedTimeClash,
     openSlots,
+    isNonWorkingDay,
   } = availability;
+
+  if (isNonWorkingDay) {
+    return line(
+      "Live calendar check",
+      `${isoDate} is not a working day for this studio. Tell the customer honestly and suggest picking a different date.`
+    );
+  }
 
   if (internalAtCapacity) {
     return line(

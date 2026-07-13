@@ -30,6 +30,9 @@ export async function GET() {
       sessionDurationMinutes: profile.sessionDurationMinutes,
       workingHoursStart: profile.workingHoursStart,
       workingHoursEnd: profile.workingHoursEnd,
+      bufferMinutes: profile.bufferMinutes,
+      workingDays: profile.workingDays,
+      minAdvanceNoticeHours: profile.minAdvanceNoticeHours,
     };
   });
 }
@@ -45,6 +48,12 @@ const PutSchema = z.object({
   sessionDurationMinutes: z.number().int().positive().max(24 * 60).nullish(),
   workingHoursStart: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullish(),
   workingHoursEnd: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullish(),
+  bufferMinutes: z.number().int().min(0).max(480).nullish(),
+  workingDays: z
+    .string()
+    .regex(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)(,(Sun|Mon|Tue|Wed|Thu|Fri|Sat))*$/)
+    .nullish(),
+  minAdvanceNoticeHours: z.number().int().min(0).max(720).nullish(),
 });
 
 export async function PUT(req: Request) {
@@ -64,6 +73,9 @@ export async function PUT(req: Request) {
     if (body.data.sessionDurationMinutes !== undefined) data.sessionDurationMinutes = body.data.sessionDurationMinutes ?? null;
     if (body.data.workingHoursStart !== undefined) data.workingHoursStart = body.data.workingHoursStart ?? null;
     if (body.data.workingHoursEnd !== undefined) data.workingHoursEnd = body.data.workingHoursEnd ?? null;
+    if (body.data.bufferMinutes !== undefined) data.bufferMinutes = body.data.bufferMinutes ?? null;
+    if (body.data.workingDays !== undefined) data.workingDays = body.data.workingDays ?? null;
+    if (body.data.minAdvanceNoticeHours !== undefined) data.minAdvanceNoticeHours = body.data.minAdvanceNoticeHours ?? null;
 
     const updated = await prisma.photographerProfile.update({
       where: { id: profile.id },
@@ -81,6 +93,9 @@ export async function PUT(req: Request) {
       sessionDurationMinutes: updated.sessionDurationMinutes,
       workingHoursStart: updated.workingHoursStart,
       workingHoursEnd: updated.workingHoursEnd,
+      bufferMinutes: updated.bufferMinutes,
+      workingDays: updated.workingDays,
+      minAdvanceNoticeHours: updated.minAdvanceNoticeHours,
     };
   });
 }

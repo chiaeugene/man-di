@@ -105,6 +105,15 @@ export type InternalBooking = { time: string | null }; // "HH:MM" or null (no ti
 // busy interval or any internally booked session? Walks the working window
 // in 30-minute steps. Internal bookings without a known time can't block a
 // specific slot — the day-level maxBookingsPerDay cap covers those.
+//
+// bufferMinutes pads every commitment on both sides (travel/setup/rest time)
+// before checking overlap — a session ending at 11:00 with a 30min buffer
+// blocks new sessions from starting until 11:30, not 11:00.
+//
+// earliestStartMinute is a floor on the window's start, used to enforce a
+// minimum-advance-notice rule for "today" (or any date close enough that the
+// notice period spills into it) — computed by the caller since it depends on
+// the real current time, not just the date being checked.
 export function computeOpenSlots(opts: {
   isoDate: string;
   busyIntervals: BusyInterval[];
@@ -112,19 +121,23 @@ export function computeOpenSlots(opts: {
   workingHoursEnd: string | null;
   sessionDurationMinutes: number;
   internalBookings: InternalBooking[];
+  bufferMinutes?: number | null;
+  earliestStartMinute?: number | null;
 }): string[] {
-  const windowStart = parseHhMm(opts.workingHoursStart) ?? parseHhMm(DEFAULT_WORKING_HOURS_START)!;
+  const buffer = opts.bufferMinutes ?? 0;
+  let windowStart = parseHhMm(opts.workingHoursStart) ?? parseHhMm(DEFAULT_WORKING_HOURS_START)!;
+  if (opts.earliestStartMinute != null) windowStart = Math.max(windowStart, opts.earliestStartMinute);
   const windowEnd = parseHhMm(opts.workingHoursEnd) ?? parseHhMm(DEFAULT_WORKING_HOURS_END)!;
   const duration = opts.sessionDurationMinutes;
 
   const blocked: [number, number][] = [];
   for (const interval of opts.busyIntervals) {
     const mins = busyIntervalToMinutes(interval, opts.isoDate);
-    if (mins) blocked.push(mins);
+    if (mins) blocked.push([mins[0] - buffer, mins[1] + buffer]);
   }
   for (const booking of opts.internalBookings) {
     const start = parseHhMm(booking.time);
-    if (start != null) blocked.push([start, start + duration]);
+    if (start != null) blocked.push([start - buffer, start + duration + buffer]);
   }
 
   const open: string[] = [];
@@ -134,6 +147,26 @@ export function computeOpenSlots(opts: {
     if (!clashes) open.push(minutesToHhMm(start));
   }
   return open;
+}
+
+// The studio's own timezone weekday, regardless of the server's local TZ —
+// noon anchors it safely away from any midnight boundary edge cases.
+function isoDateWeekday(isoDate: string): string {
+  const d = new Date(`${isoDate}T12:00:00+08:00`);
+  return new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kuala_Lumpur", weekday: "short" }).format(d);
+}
+
+// Converts a minimum-advance-notice rule into a floor on the day's start
+// minute. Returns null when the date is far enough out that no restriction
+// applies, or a value >= 24*60 when the entire day is too soon to book at all.
+function computeEarliestStartMinute(minAdvanceNoticeHours: number | null, isoDate: string): number | null {
+  if (minAdvanceNoticeHours == null) return null;
+  const earliestInstant = Date.now() + minAdvanceNoticeHours * 60 * 60 * 1000;
+  const dayStart = new Date(`${isoDate}T00:00:00+08:00`).getTime();
+  const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+  if (earliestInstant <= dayStart) return null;
+  if (earliestInstant >= dayEnd) return 24 * 60;
+  return Math.ceil((earliestInstant - dayStart) / 60000);
 }
 
 export type DateAvailability = {
@@ -148,6 +181,7 @@ export type DateAvailability = {
   requestedTime: string | null;
   requestedTimeClash: boolean;
   openSlots: string[] | null;
+  isNonWorkingDay: boolean;
 };
 
 export async function resolveDateAvailability(
@@ -156,6 +190,11 @@ export async function resolveDateAvailability(
   internalBookings: InternalBooking[],
   requestedTime: string | null = null
 ): Promise<DateAvailability> {
+  const workingDays = profile.workingDays
+    ? profile.workingDays.split(",").map((d) => d.trim()).filter(Boolean)
+    : null;
+  const isNonWorkingDay = workingDays != null && !workingDays.includes(isoDateWeekday(isoDate));
+
   const { checked, busy, busyIntervals } = await checkGoogleCalendarBusy(profile, isoDate);
   const maxBookingsPerDay = profile.maxBookingsPerDay ?? null;
   const internalBookedCount = internalBookings.length;
@@ -164,14 +203,20 @@ export async function resolveDateAvailability(
   let openSlots: string[] | null = null;
   let requestedTimeClash = false;
   if (duration != null && checked) {
-    openSlots = computeOpenSlots({
-      isoDate,
-      busyIntervals,
-      workingHoursStart: profile.workingHoursStart,
-      workingHoursEnd: profile.workingHoursEnd,
-      sessionDurationMinutes: duration,
-      internalBookings,
-    });
+    if (isNonWorkingDay) {
+      openSlots = [];
+    } else {
+      openSlots = computeOpenSlots({
+        isoDate,
+        busyIntervals,
+        workingHoursStart: profile.workingHoursStart,
+        workingHoursEnd: profile.workingHoursEnd,
+        sessionDurationMinutes: duration,
+        internalBookings,
+        bufferMinutes: profile.bufferMinutes ?? 0,
+        earliestStartMinute: computeEarliestStartMinute(profile.minAdvanceNoticeHours ?? null, isoDate),
+      });
+    }
     const reqStart = parseHhMm(requestedTime);
     if (reqStart != null) requestedTimeClash = !openSlots.includes(minutesToHhMm(reqStart));
   }
@@ -189,5 +234,6 @@ export async function resolveDateAvailability(
     requestedTime,
     requestedTimeClash,
     openSlots,
+    isNonWorkingDay,
   };
 }

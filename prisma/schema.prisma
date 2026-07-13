@@ -56,6 +56,9 @@ model PhotographerProfile {
   sessionDurationMinutes   Int?    // typical length of one shoot; null = full-day events (e.g. weddings)
   workingHoursStart        String? // "09:00" (24h); code default 09:00 when unset
   workingHoursEnd          String? // "19:00" (24h); code default 19:00 when unset
+  bufferMinutes            Int?    // gap enforced before/after every commitment (travel/setup/rest); null = no buffer
+  workingDays              String? // comma-separated weekday abbrevs e.g. "Mon,Tue,Wed,Thu,Fri,Sat"; null = every day allowed
+  minAdvanceNoticeHours    Int?    // shortest notice before a slot can be offered (e.g. 24 = no same-day bookings); null = no restriction
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

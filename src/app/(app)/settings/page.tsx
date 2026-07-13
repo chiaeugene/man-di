@@ -17,7 +17,12 @@ interface SettingsData {
   sessionDurationMinutes: number | null;
   workingHoursStart: string | null;
   workingHoursEnd: string | null;
+  bufferMinutes: number | null;
+  workingDays: string | null;
+  minAdvanceNoticeHours: number | null;
 }
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 interface GoogleCalendarState {
   connected: boolean;
@@ -120,6 +125,9 @@ function SettingsPageInner() {
           sessionDurationMinutes: d.sessionDurationMinutes ?? null,
           workingHoursStart: d.workingHoursStart ?? null,
           workingHoursEnd: d.workingHoursEnd ?? null,
+          bufferMinutes: d.bufferMinutes ?? null,
+          workingDays: d.workingDays ?? null,
+          minAdvanceNoticeHours: d.minAdvanceNoticeHours ?? null,
         });
         setGcal({ connected: Boolean(d.googleCalendarConnected), accountEmail: d.googleAccountEmail ?? null });
       });
@@ -359,6 +367,70 @@ function SettingsPageInner() {
                 className="w-full max-w-[10rem] rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
               />
             </div>
+            <div>
+              <label htmlFor="bufferMinutes" className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
+                {t("settings.fields.bufferMinutes")}
+              </label>
+              <input
+                id="bufferMinutes"
+                type="number"
+                min={0}
+                step={15}
+                value={data.bufferMinutes ?? ""}
+                onChange={(e) => setData({ ...data, bufferMinutes: e.target.value === "" ? null : Number(e.target.value) })}
+                placeholder={t("settings.placeholders.bufferMinutes")}
+                className="w-full max-w-[10rem] rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+              />
+              <p className="mt-2 text-xs text-wine-soft/50">{t("settings.bufferMinutesHint")}</p>
+            </div>
+            <div>
+              <label htmlFor="minAdvanceNoticeHours" className="mb-1.5 block text-xs font-semibold text-wine-soft/60">
+                {t("settings.fields.minAdvanceNoticeHours")}
+              </label>
+              <input
+                id="minAdvanceNoticeHours"
+                type="number"
+                min={0}
+                step={1}
+                value={data.minAdvanceNoticeHours ?? ""}
+                onChange={(e) =>
+                  setData({ ...data, minAdvanceNoticeHours: e.target.value === "" ? null : Number(e.target.value) })
+                }
+                placeholder={t("settings.placeholders.minAdvanceNoticeHours")}
+                className="w-full max-w-[10rem] rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+              />
+              <p className="mt-2 text-xs text-wine-soft/50">{t("settings.minAdvanceNoticeHint")}</p>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <label className="mb-1.5 block text-xs font-semibold text-wine-soft/60">{t("settings.fields.workingDays")}</label>
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAYS.map((day) => {
+                const selectedDays = data.workingDays ? data.workingDays.split(",") : null;
+                const isOn = selectedDays === null || selectedDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      const current = selectedDays ?? [...WEEKDAYS];
+                      const next = current.includes(day) ? current.filter((d) => d !== day) : [...current, day];
+                      // All 7 selected is equivalent to "no restriction" — store as null.
+                      setData({ ...data, workingDays: next.length === WEEKDAYS.length ? null : next.join(",") });
+                    }}
+                    className={`cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors duration-150 ${
+                      isOn
+                        ? "border-rose-300 bg-rose-100 text-rose-700"
+                        : "border-rose-100 bg-white text-wine-soft/40 hover:bg-rose-50"
+                    }`}
+                  >
+                    {t(`settings.weekday.${day}`)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-wine-soft/50">{t("settings.workingDaysHint")}</p>
           </div>
         </section>
 
