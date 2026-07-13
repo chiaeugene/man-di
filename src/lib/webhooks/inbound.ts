@@ -135,9 +135,28 @@ export async function recordInboundImageMessage(opts: {
   // engages when the photographer has explicitly turned this on; the vision
   // model itself never touches the DB, it only returns a verdict that's
   // checked against a fixed threshold in plain code below.
+  let verification: Awaited<ReturnType<typeof runVerification>> = null;
   if (profile.autoConfirmPayments) {
-    const verification = await verifyAndMaybeConfirm(profile, lead, inboundAttachmentId, conversationId);
-    if (verification) return verification;
+    verification = await runVerification(profile, inboundAttachmentId);
+    if (verification && isConfidentPaymentMatch(verification)) {
+      const updatedLead = await confirmDepositAndBook(profile, lead);
+      // If the date isn't locked yet (payment arrived before the date was
+      // discussed), keep the conversation moving toward it — the calendar
+      // event auto-creates the moment the date lands (see applyEngineEffects).
+      const dateFollowUp = !lead.eventDate
+        ? " Which date would you like to book? I'll lock it in right away 😊"
+        : "";
+      const ackReply = `Payment verified! ✅ RM${verification.extractedAmount} confirmed — your booking is secured 🎉${dateFollowUp}`;
+      await prisma.message.create({
+        data: {
+          conversationId,
+          role: "MANDY",
+          content: ackReply,
+          meta: toJson({ paymentVerification: verification, leadStatus: updatedLead.status }),
+        },
+      });
+      return { ackReply };
+    }
   }
 
   const photographer = profile.photographerName || "the team";
@@ -152,53 +171,37 @@ export async function recordInboundImageMessage(opts: {
     },
   });
 
+  // Store the verdict even on the fallback path (if the vision check ran at
+  // all) — previously a failed/inconclusive auto-confirm attempt left no
+  // trace anywhere, which made a real reliability issue invisible until a
+  // full DB investigation. Now the photographer/CRM can see exactly why.
   await prisma.message.create({
-    data: { conversationId, role: "MANDY", content: ackReply },
+    data: {
+      conversationId,
+      role: "MANDY",
+      content: ackReply,
+      meta: verification ? toJson({ paymentVerification: verification, autoConfirmed: false }) : null,
+    },
   });
 
   return { ackReply };
 }
 
-// Best-effort: any failure (vision call errors, low confidence, mismatch)
-// returns null so the caller falls through to the normal human-handoff path.
-async function verifyAndMaybeConfirm(
-  profile: PhotographerProfile,
-  lead: Lead,
-  inboundAttachmentId: string,
-  conversationId: string
-): Promise<{ ackReply: string } | null> {
+// Best-effort: any failure (missing attachment, vision call errors) returns
+// null. A non-null, non-confident result is still returned (not swallowed)
+// so the caller can store it for audit even when it doesn't auto-confirm.
+async function runVerification(profile: PhotographerProfile, inboundAttachmentId: string) {
   try {
     const attachment = await prisma.inboundAttachment.findUnique({ where: { id: inboundAttachmentId } });
     if (!attachment) return null;
 
     const booking = BookingBrainSchema.parse(parseJson(profile.bookingBrain, {}));
-    const verification = await verifyPaymentProof({
+    return await verifyPaymentProof({
       imageData: attachment.data,
       mimeType: attachment.mimeType,
       paymentMethods: booking.paymentMethods || "",
       paymentInstructions: booking.paymentInstructions || "",
     });
-    if (!verification || !isConfidentPaymentMatch(verification)) return null;
-
-    const updatedLead = await confirmDepositAndBook(profile, lead);
-    // If the date isn't locked yet (payment arrived before the date was
-    // discussed), keep the conversation moving toward it — the calendar
-    // event auto-creates the moment the date lands (see applyEngineEffects).
-    const dateFollowUp = !lead.eventDate
-      ? " Which date would you like to book? I'll lock it in right away 😊"
-      : "";
-    const ackReply = `Payment verified! ✅ RM${verification.extractedAmount} confirmed — your booking is secured 🎉${dateFollowUp}`;
-
-    await prisma.message.create({
-      data: {
-        conversationId,
-        role: "MANDY",
-        content: ackReply,
-        meta: toJson({ paymentVerification: verification, leadStatus: updatedLead.status }),
-      },
-    });
-
-    return { ackReply };
   } catch (err) {
     console.error("[vision] auto-confirm failed (non-fatal, falling back to human review)", err);
     return null;
