@@ -127,14 +127,13 @@ export async function recordInboundImageMessage(opts: {
     },
   });
 
-  // Already mid-review — record the extra image but don't repeat the ack.
-  if (lead.needsHuman) return null;
-
   // Opt-in, high-risk exception to the "AI cannot set money states" rule —
-  // see src/lib/ai/vision.ts and src/lib/leads/confirm-deposit.ts. Only
-  // engages when the photographer has explicitly turned this on; the vision
-  // model itself never touches the DB, it only returns a verdict that's
-  // checked against a fixed threshold in plain code below.
+  // see src/lib/ai/vision.ts and src/lib/leads/confirm-deposit.ts. Runs even
+  // if the lead is already flagged for human review for an unrelated reason
+  // (e.g. an odd question) — confirmDepositAndBook only ever writes
+  // depositStatus/status/calendar fields, never needsHuman/takeoverReason,
+  // so a pending unrelated issue stays flagged exactly as it was; this just
+  // stops a real payment from sitting unverified until someone notices it.
   let verification: Awaited<ReturnType<typeof runVerification>> = null;
   if (profile.autoConfirmPayments) {
     verification = await runVerification(profile, inboundAttachmentId);
@@ -159,17 +158,24 @@ export async function recordInboundImageMessage(opts: {
     }
   }
 
+  // Not auto-confirmed. The customer still gets an acknowledgment either
+  // way — silence after sending payment proof is worse than a repeated
+  // message. Only (re)flag needsHuman/takeoverReason if this is what
+  // triggered it; if the lead was already flagged for something else,
+  // leave that original reason untouched rather than overwriting it.
   const photographer = profile.photographerName || "the team";
   const ackReply = `Thanks for sending this! I've forwarded it to ${photographer} to verify — they'll confirm shortly 😊`;
 
-  await prisma.lead.update({
-    where: { id: lead.id },
-    data: {
-      needsHuman: true,
-      status: "Human Takeover Needed",
-      takeoverReason: "Customer sent an image (likely proof of payment) — review it in this lead's conversation.",
-    },
-  });
+  if (!lead.needsHuman) {
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: {
+        needsHuman: true,
+        status: "Human Takeover Needed",
+        takeoverReason: "Customer sent an image (likely proof of payment) — review it in this lead's conversation.",
+      },
+    });
+  }
 
   // Store the verdict even on the fallback path (if the vision check ran at
   // all) — previously a failed/inconclusive auto-confirm attempt left no
