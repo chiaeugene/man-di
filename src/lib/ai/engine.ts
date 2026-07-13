@@ -62,8 +62,40 @@ export async function generateMandyReply(opts: {
     }),
   ]);
 
+  // Quick, cheap pre-extraction so a date mentioned for the very first time
+  // in THIS message can still get a grounded calendar check this same turn.
+  // Without it, the availability check below only ever sees lead.eventDate
+  // as it stood BEFORE this message (real extraction happens after the
+  // reply, in applyEngineEffects) — so the first time a customer names a
+  // date, they always hit the "I can't check the calendar" fallback for one
+  // full turn, even though the date was sitting right there in their message.
+  let effectiveEventDate = lead.eventDate;
+  let effectiveEventTime = lead.eventTime;
+  if (!effectiveEventDate && customerMessage) {
+    try {
+      const today = new Intl.DateTimeFormat("en-MY", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        timeZone: "Asia/Kuala_Lumpur",
+      }).format(new Date());
+      const quickRaw = await chatComplete({
+        system: `Today's date is ${today} (Malaysia). Extract a specific event date/time if the customer's message mentions one, resolving relative phrases ("next month", "8月8号", "8 August") into an absolute date. Respond with EXACTLY one JSON object, nothing else: {"eventDate": "YYYY-MM-DD"|null, "eventTime": "HH:MM"|null (24h)}. Only fill a field when a specific value is clearly given — leave null for vague mentions.`,
+        messages: [{ role: "user", content: customerMessage }],
+        maxTokens: 200,
+        temperature: 0,
+      });
+      const quick = extractJson(quickRaw) as { eventDate?: string | null; eventTime?: string | null } | null;
+      if (quick?.eventDate) effectiveEventDate = quick.eventDate;
+      if (quick?.eventTime) effectiveEventTime = quick.eventTime;
+    } catch (err) {
+      console.error("[engine] quick date pre-extraction failed (non-fatal)", err);
+    }
+  }
+
   let availability: DateAvailability | null = null;
-  const isoDate = parseEventDateToIso(lead.eventDate);
+  const isoDate = parseEventDateToIso(effectiveEventDate);
   if (isoDate) {
     try {
       const bookedLeads = await prisma.lead.findMany({
@@ -73,7 +105,7 @@ export async function generateMandyReply(opts: {
       const sameDayBookings = bookedLeads
         .filter((l) => parseEventDateToIso(l.eventDate) === isoDate)
         .map((l) => ({ time: l.eventTime }));
-      availability = await resolveDateAvailability(profile, isoDate, sameDayBookings, lead.eventTime);
+      availability = await resolveDateAvailability(profile, isoDate, sameDayBookings, effectiveEventTime);
     } catch (err) {
       // Best-effort — a broken calendar check must never break the reply.
       console.error("[availability] failed to resolve (non-fatal)", err);
