@@ -1,12 +1,24 @@
 import type { PhotographerProfile } from "@prisma/client";
 import { getValidAccessToken } from "./oauth";
 
-const FREEBUSY_URL = "https://www.googleapis.com/calendar/v3/freeBusy";
+const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
 export type BusyInterval = { start: string; end: string }; // ISO datetimes from Google
 
 // Best-effort by design, same discipline as events.ts/sync.ts: a broken
 // calendar check must never break Mandy's reply. Never throws.
+//
+// Deliberately reads the real event list instead of calling the freeBusy
+// API. freeBusy only reports events marked "Busy" — an event the
+// photographer created and left as (or manually set to) "Show as: Free" is
+// invisible to it, even though it's a real commitment. Confirmed against a
+// real production event: a genuine 8-9am booking was marked
+// transparency:"transparent" and freeBusy silently reported the day as
+// fully clear, which let Mandy offer that exact slot to a different
+// customer. Treating every non-cancelled calendar event as occupied time —
+// regardless of its Free/Busy marking — is the safe default for a
+// scheduling assistant that can't rely on the photographer remembering to
+// mark everything Busy.
 export async function checkGoogleCalendarBusy(
   profile: PhotographerProfile,
   isoDate: string
@@ -17,29 +29,30 @@ export async function checkGoogleCalendarBusy(
   try {
     const accessToken = await getValidAccessToken(profile.googleRefreshToken);
     const calendarId = profile.googleCalendarId || "primary";
-    const res = await fetch(FREEBUSY_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        // RFC3339 requires an explicit UTC offset — Google rejects
-        // offset-less timestamps with a 400. +08:00 = Malaysia.
-        timeMin: `${isoDate}T00:00:00+08:00`,
-        timeMax: `${isoDate}T23:59:59+08:00`,
-        timeZone: "Asia/Kuala_Lumpur",
-        items: [{ id: calendarId }],
-      }),
+    const params = new URLSearchParams({
+      // RFC3339 requires an explicit UTC offset — Google rejects
+      // offset-less timestamps with a 400. +08:00 = Malaysia.
+      timeMin: `${isoDate}T00:00:00+08:00`,
+      timeMax: `${isoDate}T23:59:59+08:00`,
+      singleEvents: "true",
+    });
+    const res = await fetch(`${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) {
-      console.error("[google-calendar] freebusy check failed", res.status, await res.text());
+      console.error("[google-calendar] event list check failed", res.status, await res.text());
       return { checked: false, busy: false, busyIntervals: [] };
     }
     const data = (await res.json()) as {
-      calendars?: Record<string, { busy?: BusyInterval[] }>;
+      items?: { status?: string; start?: { date?: string; dateTime?: string }; end?: { date?: string; dateTime?: string } }[];
     };
-    const busyIntervals = data.calendars?.[calendarId]?.busy ?? [];
+    const busyIntervals: BusyInterval[] = (data.items ?? [])
+      .filter((e) => e.status !== "cancelled")
+      .map((e) => ({ start: e.start?.dateTime ?? e.start?.date ?? "", end: e.end?.dateTime ?? e.end?.date ?? "" }))
+      .filter((e) => e.start && e.end);
     return { checked: true, busy: busyIntervals.length > 0, busyIntervals };
   } catch (err) {
-    console.error("[google-calendar] freebusy check failed (non-fatal)", err);
+    console.error("[google-calendar] event list check failed (non-fatal)", err);
     return { checked: false, busy: false, busyIntervals: [] };
   }
 }
@@ -63,14 +76,23 @@ function minutesToHhMm(minutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+// A date-only string (all-day event boundary, e.g. "2026-08-08") is not an
+// instant — anchor it to local midnight explicitly. Parsing it as a bare
+// ISO date would read as UTC midnight, which is 8am local time in Malaysia,
+// shifting an all-day block's start 8 hours late.
+function toEpochMs(value: string): number {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T00:00:00+08:00`).getTime();
+  return new Date(value).getTime();
+}
+
 // Converts a Google busy interval to [startMin, endMin) minutes-of-day for
 // the given date, clamped to the day. Google returns the times in UTC or with
 // offsets — normalize via the Malaysia offset the query itself used.
 function busyIntervalToMinutes(interval: BusyInterval, isoDate: string): [number, number] | null {
   const dayStart = new Date(`${isoDate}T00:00:00+08:00`).getTime();
   const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-  const start = new Date(interval.start).getTime();
-  const end = new Date(interval.end).getTime();
+  const start = toEpochMs(interval.start);
+  const end = toEpochMs(interval.end);
   if (Number.isNaN(start) || Number.isNaN(end) || end <= dayStart || start >= dayEnd) return null;
   const clampedStart = Math.max(start, dayStart);
   const clampedEnd = Math.min(end, dayEnd);
