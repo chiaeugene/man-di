@@ -62,20 +62,20 @@ export async function generateMandyReply(opts: {
     }),
   ]);
 
-  // Quick, cheap pre-extraction so a date/time mentioned for the very first
-  // time in THIS message can still get a grounded calendar check this same
-  // turn. Without it, the availability check below only ever sees
-  // lead.eventDate/eventTime as they stood BEFORE this message (real
-  // extraction happens after the reply, in applyEngineEffects) — so the
-  // first time a customer names a date, or later names a SPECIFIC TIME for
-  // an already-known date, that fact is invisible to this turn's check.
-  // Gating only on the date being unknown (an earlier version of this fix)
-  // missed exactly that second case: once the date was set, a first-time
-  // "is 8am available?" never got checked against real slots at all — the
-  // model was left guessing from a bare slot list and got it wrong.
+  // Quick, cheap pre-extraction so any date/time mentioned in THIS message —
+  // whether it's the first mention or a change to an already-known value —
+  // can still get a grounded calendar check this same turn. Without it, the
+  // availability check below only ever sees lead.eventDate/eventTime as they
+  // stood BEFORE this message (real extraction happens after the reply, in
+  // applyEngineEffects). Earlier versions of this fix gated on the date or
+  // time being unknown, which missed a customer CHANGING an already-set
+  // date/time ("actually can we do 3pm instead?") — both fields were
+  // already non-null, so the gate never fired and the check ran against the
+  // stale, previously-saved value for the entire turn. Running unconditionally
+  // whenever there's a customer message closes that gap.
   let effectiveEventDate = lead.eventDate;
   let effectiveEventTime = lead.eventTime;
-  if ((!effectiveEventDate || !effectiveEventTime) && customerMessage) {
+  if (customerMessage) {
     try {
       const today = new Intl.DateTimeFormat("en-MY", {
         weekday: "long",
