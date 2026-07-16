@@ -60,3 +60,15 @@ export type MessageRole = (typeof MESSAGE_ROLES)[number];
 
 export const ONBOARDING_STATUSES = ["NOT_STARTED", "INTERVIEW", "TRAINING", "COMPLETED"] as const;
 export type OnboardingStatus = (typeof ONBOARDING_STATUSES)[number];
+
+export const CAMPAIGN_STATUSES = ["DRAFT", "SENDING", "SENT", "FAILED"] as const;
+export type CampaignStatus = (typeof CAMPAIGN_STATUSES)[number];
+
+// Lead statuses that must never receive an automated follow-up or campaign
+// nudge — either the deal is closed, or a human is already handling it.
+export const FOLLOWUP_EXCLUDED_STATUSES: LeadStatus[] = [
+  "Deposit Paid",
+  "Booked",
+  "Lost",
+  "Human Takeover Needed",
+];

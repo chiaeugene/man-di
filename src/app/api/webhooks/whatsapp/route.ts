@@ -105,7 +105,7 @@ export async function POST(req: Request) {
       for (const message of value.messages) {
         try {
           if (message.type === "image" && message.image?.id) {
-            const media = await fetchWhatsAppMediaBytes(message.image.id);
+            const media = await fetchWhatsAppMediaBytes(message.image.id, profile.whatsappAccessToken);
             const fileType = media ? inboundMimeToType(media.mimeType) : null;
             if (media && fileType && media.data.length <= INBOUND_ATTACHMENT_MAX_BYTES) {
               const attachment = await prisma.inboundAttachment.create({
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
                 externalMessageId: message.id,
                 caption: message.image.caption,
               });
-              if (result?.ackReply) await sendWhatsAppText(phoneNumberId, message.from, result.ackReply);
+              if (result?.ackReply) await sendWhatsAppText(phoneNumberId, message.from, result.ackReply, profile.whatsappAccessToken);
               continue;
             }
             // Download or validation failed — fall through to the generic
@@ -153,9 +153,9 @@ export async function POST(req: Request) {
           });
           if (!result) continue;
 
-          await sendWhatsAppText(phoneNumberId, message.from, result.reply);
+          await sendWhatsAppText(phoneNumberId, message.from, result.reply, profile.whatsappAccessToken);
           if (result.attachmentIds.length) {
-            await sendWhatsAppAttachmentsByIds(phoneNumberId, message.from, result.attachmentIds);
+            await sendWhatsAppAttachmentsByIds(phoneNumberId, message.from, result.attachmentIds, profile.whatsappAccessToken);
           }
         } catch (err) {
           console.error("[whatsapp webhook] failed to process message", message.id, err);

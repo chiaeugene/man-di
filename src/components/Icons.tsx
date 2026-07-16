@@ -246,3 +246,10 @@ export const IconLink = (p: IconProps) => (
     <path d="M8 12h8" />
   </svg>
 );
+
+export const IconMegaphone = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H15l6 4V5l-6 4H8a2 2 0 0 0-2 2z" />
+    <path d="M15 9v6" />
+  </svg>
+);

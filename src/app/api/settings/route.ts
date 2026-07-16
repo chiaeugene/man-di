@@ -33,6 +33,9 @@ export async function GET() {
       bufferMinutes: profile.bufferMinutes,
       workingDays: profile.workingDays,
       minAdvanceNoticeHours: profile.minAdvanceNoticeHours,
+      followUpEnabled: profile.followUpEnabled,
+      followUpHours: profile.followUpHours,
+      followUpMaxCount: profile.followUpMaxCount,
     };
   });
 }
@@ -54,6 +57,12 @@ const PutSchema = z.object({
     .regex(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)(,(Sun|Mon|Tue|Wed|Thu|Fri|Sat))*$/)
     .nullish(),
   minAdvanceNoticeHours: z.number().int().min(0).max(720).nullish(),
+  followUpEnabled: z.boolean().optional(),
+  // Capped at 20h (not 24h) — code enforces this same ceiling in
+  // src/lib/followups.ts to stay safely inside WhatsApp's 24h free-form
+  // message window regardless of what's stored here.
+  followUpHours: z.number().int().positive().max(20).nullish(),
+  followUpMaxCount: z.number().int().positive().max(10).nullish(),
 });
 
 export async function PUT(req: Request) {
@@ -76,6 +85,9 @@ export async function PUT(req: Request) {
     if (body.data.bufferMinutes !== undefined) data.bufferMinutes = body.data.bufferMinutes ?? null;
     if (body.data.workingDays !== undefined) data.workingDays = body.data.workingDays ?? null;
     if (body.data.minAdvanceNoticeHours !== undefined) data.minAdvanceNoticeHours = body.data.minAdvanceNoticeHours ?? null;
+    if (body.data.followUpEnabled !== undefined) data.followUpEnabled = body.data.followUpEnabled;
+    if (body.data.followUpHours !== undefined) data.followUpHours = body.data.followUpHours ?? null;
+    if (body.data.followUpMaxCount !== undefined) data.followUpMaxCount = body.data.followUpMaxCount ?? null;
 
     const updated = await prisma.photographerProfile.update({
       where: { id: profile.id },
@@ -96,6 +108,9 @@ export async function PUT(req: Request) {
       bufferMinutes: updated.bufferMinutes,
       workingDays: updated.workingDays,
       minAdvanceNoticeHours: updated.minAdvanceNoticeHours,
+      followUpEnabled: updated.followUpEnabled,
+      followUpHours: updated.followUpHours,
+      followUpMaxCount: updated.followUpMaxCount,
     };
   });
 }

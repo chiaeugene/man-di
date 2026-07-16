@@ -94,9 +94,9 @@ async function resumePendingReply(
   refreshLeadSummary(profile, refreshedLead, conversation.id).catch(() => {});
 
   if (lead.source === "WHATSAPP" && profile.whatsappPhoneId && lead.phone) {
-    await sendWhatsAppText(profile.whatsappPhoneId, lead.phone, output.reply);
+    await sendWhatsAppText(profile.whatsappPhoneId, lead.phone, output.reply, profile.whatsappAccessToken);
     if (attachmentIds.length) {
-      await sendWhatsAppAttachmentsByIds(profile.whatsappPhoneId, lead.phone, attachmentIds);
+      await sendWhatsAppAttachmentsByIds(profile.whatsappPhoneId, lead.phone, attachmentIds, profile.whatsappAccessToken);
     }
   }
   return true;

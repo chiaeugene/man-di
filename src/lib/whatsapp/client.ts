@@ -16,16 +16,23 @@ function apiBase(phoneNumberId: string): string {
   return `https://graph.facebook.com/${version}/${phoneNumberId}`;
 }
 
-function accessToken(): string | null {
-  return process.env.WHATSAPP_ACCESS_TOKEN || null;
+// Per-tenant token (from Meta Embedded Signup on /connect) wins; the global
+// env token remains as the fallback for manually-configured setups.
+function accessToken(tokenOverride?: string | null): string | null {
+  return tokenOverride || process.env.WHATSAPP_ACCESS_TOKEN || null;
 }
 
 export function whatsappConfigured(): boolean {
   return Boolean(accessToken());
 }
 
-export async function sendWhatsAppText(phoneNumberId: string, to: string, text: string): Promise<void> {
-  const token = accessToken();
+export async function sendWhatsAppText(
+  phoneNumberId: string,
+  to: string,
+  text: string,
+  tokenOverride?: string | null
+): Promise<void> {
+  const token = accessToken(tokenOverride);
   if (!token) {
     console.error("[whatsapp] WHATSAPP_ACCESS_TOKEN not configured — cannot send message.");
     return;
@@ -54,9 +61,10 @@ export async function sendWhatsAppText(phoneNumberId: string, to: string, text: 
 export async function sendWhatsAppAttachment(
   phoneNumberId: string,
   to: string,
-  attachment: PackageAttachment
+  attachment: PackageAttachment,
+  tokenOverride?: string | null
 ): Promise<void> {
-  const token = accessToken();
+  const token = accessToken(tokenOverride);
   if (!token) {
     console.error("[whatsapp] WHATSAPP_ACCESS_TOKEN not configured — cannot send attachment.");
     return;
@@ -105,11 +113,12 @@ export async function sendWhatsAppAttachment(
 export async function sendWhatsAppAttachmentsByIds(
   phoneNumberId: string,
   to: string,
-  attachmentIds: string[]
+  attachmentIds: string[],
+  tokenOverride?: string | null
 ): Promise<void> {
   for (const id of attachmentIds.slice(0, MAX_ATTACHMENTS_PER_MESSAGE)) {
     const attachment = await prisma.packageAttachment.findUnique({ where: { id } });
-    if (attachment) await sendWhatsAppAttachment(phoneNumberId, to, attachment);
+    if (attachment) await sendWhatsAppAttachment(phoneNumberId, to, attachment, tokenOverride);
   }
 }
 
@@ -120,9 +129,10 @@ export async function sendWhatsAppAttachmentsByIds(
 // of this file's discipline (a failed download must never break the
 // webhook's required fast response back to Meta).
 export async function fetchWhatsAppMediaBytes(
-  mediaId: string
+  mediaId: string,
+  tokenOverride?: string | null
 ): Promise<{ data: Uint8Array<ArrayBuffer>; mimeType: string } | null> {
-  const token = accessToken();
+  const token = accessToken(tokenOverride);
   if (!token) {
     console.error("[whatsapp] WHATSAPP_ACCESS_TOKEN not configured — cannot fetch media.");
     return null;

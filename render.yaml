@@ -43,3 +43,35 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: CRON_SECRET
+        generateValue: true
+      # Meta Embedded Signup ("Connect with Facebook" on /connect).
+      # NEXT_PUBLIC_* values are baked in at build time — a change requires a
+      # redeploy, not just a restart.
+      - key: META_APP_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_META_APP_ID
+        sync: false
+      - key: NEXT_PUBLIC_META_WA_CONFIG_ID
+        sync: false
+
+  # Fires the no-reply follow-up sweep (src/lib/followups.ts) on a schedule.
+  # Requires a separate Render "Cron Job" service — an extra line item beyond
+  # the web service above. CRON_SECRET must match the web service's value
+  # (Render's `generateValue` mints it once for the first service that
+  # declares the key; copy the same value onto this service in the dashboard,
+  # or set both explicitly). Adjust the schedule to taste — hourly is a
+  # reasonable default given followUpHours is capped at 20.
+  - type: cron
+    name: mandy-follow-ups
+    runtime: node
+    plan: starter
+    region: singapore
+    schedule: "0 * * * *"
+    buildCommand: "true"
+    startCommand: >-
+      curl -sf -X POST -H "x-cron-secret: $CRON_SECRET"
+      https://mandy-xezj.onrender.com/api/cron/follow-ups
+    envVars:
+      - key: CRON_SECRET
+        sync: false

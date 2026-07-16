@@ -47,6 +47,11 @@ model PhotographerProfile {
 
   // Phase 2/3 stubs
   whatsappPhoneId          String?
+  // Meta Embedded Signup (self-service "Connect with Facebook" on /connect).
+  // Filled by the connect flow; whatsappPhoneId above stays the routing key.
+  whatsappAccessToken      String? // per-tenant business token — never returned by any API response
+  whatsappWabaId           String? // WhatsApp Business Account id the tenant picked during signup
+  whatsappDisplayNumber    String? // display only, e.g. "+60 12-345 6789"
   googleCalendarConnected  Boolean @default(false)
   googleRefreshToken       String? // never returned by any API response
   googleCalendarId         String? // which calendar to check/write, default "primary"
@@ -60,6 +65,14 @@ model PhotographerProfile {
   workingDays              String? // comma-separated weekday abbrevs e.g. "Mon,Tue,Wed,Thu,Fri,Sat"; null = every day allowed
   minAdvanceNoticeHours    Int?    // shortest notice before a slot can be offered (e.g. 24 = no same-day bookings); null = no restriction
 
+  // Automated no-reply follow-ups. Opt-in — off for every profile until the
+  // photographer turns it on. followUpHours must stay under WhatsApp's 24h
+  // free-form-message session window (see src/lib/followups.ts) or Meta will
+  // silently reject the send.
+  followUpEnabled  Boolean @default(false)
+  followUpHours    Int?    // hours of silence before an automated nudge; code default 20 when unset
+  followUpMaxCount Int?    // automated nudges to send before giving up and flagging for the photographer; code default 2 when unset
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -68,6 +81,7 @@ model PhotographerProfile {
   leads              Lead[]
   conversations      Conversation[]
   onboardingDocuments OnboardingDocument[]
+  campaigns          Campaign[]
 }
 
 model Package {
@@ -196,6 +210,9 @@ model Lead {
   needsHuman     Boolean @default(false)
   takeoverReason String?
 
+  lastFollowUpAt DateTime? // when the last automated no-reply nudge was sent
+  followUpCount  Int       @default(0) // automated nudges sent so far; capped by profile.followUpMaxCount
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -219,6 +236,36 @@ model Conversation {
   messages Message[]
 
   @@index([profileId, kind])
+}
+
+// A one-off broadcast the photographer sends to a chosen set of existing
+// leads (e.g. "we still have Aug slots open"). Deliberately simple: one
+// free-text message, no per-recipient personalization beyond {{customerName}}.
+// Only actually delivers to leads with a WHATSAPP conversation + phone number;
+// recipients on other channels are recorded but not sent (nothing to send to).
+model Campaign {
+  id        String              @id @default(cuid())
+  profileId String
+  profile   PhotographerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  name    String
+  message String // may contain {{customerName}}, replaced per-recipient
+
+  // JSON filter: { statuses?: string[], sources?: string[] } — empty/absent
+  // fields mean "no filter on that dimension". Resolved at send time, not
+  // frozen at creation, so a DRAFT reflects the current lead list.
+  audience String @default("{}")
+
+  status String @default("DRAFT") // DRAFT | SENDING | SENT | FAILED
+
+  recipientCount Int @default(0)
+  sentCount      Int @default(0)
+  failedCount    Int @default(0)
+
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+
+  @@index([profileId])
 }
 
 model Message {

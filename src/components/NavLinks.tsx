@@ -10,6 +10,8 @@ import {
   IconFlask,
   IconUsers,
   IconSettings,
+  IconMegaphone,
+  IconLink,
 } from "@/components/Icons";
 import { useI18n } from "@/lib/i18n/LocaleProvider";
 
@@ -20,6 +22,8 @@ const LINKS = [
   { href: "/packages", key: "nav.packages", Icon: IconPackage },
   { href: "/playground", key: "nav.playground", Icon: IconFlask },
   { href: "/leads", key: "nav.leads", Icon: IconUsers },
+  { href: "/campaigns", key: "nav.campaigns", Icon: IconMegaphone },
+  { href: "/connect", key: "nav.connect", Icon: IconLink },
   { href: "/settings", key: "nav.settings", Icon: IconSettings },
 ];
 

@@ -20,6 +20,9 @@ interface SettingsData {
   bufferMinutes: number | null;
   workingDays: string | null;
   minAdvanceNoticeHours: number | null;
+  followUpEnabled: boolean;
+  followUpHours: number | null;
+  followUpMaxCount: number | null;
 }
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
@@ -128,6 +131,9 @@ function SettingsPageInner() {
           bufferMinutes: d.bufferMinutes ?? null,
           workingDays: d.workingDays ?? null,
           minAdvanceNoticeHours: d.minAdvanceNoticeHours ?? null,
+          followUpEnabled: Boolean(d.followUpEnabled),
+          followUpHours: d.followUpHours ?? null,
+          followUpMaxCount: d.followUpMaxCount ?? null,
         });
         setGcal({ connected: Boolean(d.googleCalendarConnected), accountEmail: d.googleAccountEmail ?? null });
       });
@@ -449,6 +455,57 @@ function SettingsPageInner() {
             />
             {t("settings.autoConfirmPaymentsToggle")}
           </label>
+        </section>
+
+        <section className="rounded-3xl border border-amber-200 bg-champagne p-6 shadow-petal">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-gold"><IconChat size={15} /></span>
+            <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-amber-900">{t("settings.followUps")}</h2>
+          </div>
+          <p className="mb-4 text-xs leading-relaxed text-amber-900/70">{t("settings.followUpsDesc")}</p>
+          <label className="mb-4 flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-amber-900">
+            <input
+              type="checkbox"
+              checked={data.followUpEnabled}
+              onChange={(e) => setData({ ...data, followUpEnabled: e.target.checked })}
+              className="h-4 w-4 cursor-pointer accent-rose-600"
+            />
+            {t("settings.followUpsToggle")}
+          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="followUpHours" className="mb-1.5 block text-xs font-semibold text-amber-900/70">
+                {t("settings.fields.followUpHours")}
+              </label>
+              <input
+                id="followUpHours"
+                type="number"
+                min={1}
+                max={20}
+                value={data.followUpHours ?? ""}
+                onChange={(e) => setData({ ...data, followUpHours: e.target.value === "" ? null : Number(e.target.value) })}
+                placeholder={t("settings.placeholders.followUpHours")}
+                className="w-full max-w-[10rem] rounded-xl border border-amber-300 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+              />
+              <p className="mt-2 text-xs text-amber-900/60">{t("settings.followUpHoursHint")}</p>
+            </div>
+            <div>
+              <label htmlFor="followUpMaxCount" className="mb-1.5 block text-xs font-semibold text-amber-900/70">
+                {t("settings.fields.followUpMaxCount")}
+              </label>
+              <input
+                id="followUpMaxCount"
+                type="number"
+                min={1}
+                max={10}
+                value={data.followUpMaxCount ?? ""}
+                onChange={(e) => setData({ ...data, followUpMaxCount: e.target.value === "" ? null : Number(e.target.value) })}
+                placeholder={t("settings.placeholders.followUpMaxCount")}
+                className="w-full max-w-[10rem] rounded-xl border border-amber-300 bg-white px-3.5 py-2.5 text-sm text-wine outline-none transition-shadow duration-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+              />
+              <p className="mt-2 text-xs text-amber-900/60">{t("settings.followUpMaxCountHint")}</p>
+            </div>
+          </div>
         </section>
 
         <section className="rounded-3xl border border-red-200 bg-red-50/40 p-6 shadow-petal">
